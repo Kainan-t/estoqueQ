@@ -19,6 +19,7 @@ interface Props {
 export function ConfiguracoesClient({ materias, qualidade, usuarios }: Props) {
   const router = useRouter()
   const supabase = createClient()
+  const [saveError, setSaveError] = useState('')
 
   // Estoque mínimo
   const [minimoValues, setMinimoValues] = useState<Record<string, string>>(
@@ -30,8 +31,10 @@ export function ConfiguracoesClient({ materias, qualidade, usuarios }: Props) {
     const val = parseFloat(minimoValues[id])
     if (isNaN(val) || val < 0) return
     setSavingMinimo(id)
+    setSaveError('')
     try {
-      await supabase.from('materias_primas').update({ estoque_minimo: val }).eq('id', id)
+      const { error } = await supabase.from('materias_primas').update({ estoque_minimo: val }).eq('id', id)
+      if (error) { setSaveError('Erro ao salvar estoque mínimo.'); return }
       router.refresh()
     } finally {
       setSavingMinimo(null)
@@ -47,8 +50,11 @@ export function ConfiguracoesClient({ materias, qualidade, usuarios }: Props) {
 
   async function salvarQualidade(cor: string) {
     setSavingQual(cor)
+    setSaveError('')
     try {
-      await supabase.from('configuracoes_qualidade').update({ descricao: qualValues[cor] }).eq('cor', cor)
+      const { error } = await supabase.from('configuracoes_qualidade').update({ descricao: qualValues[cor] }).eq('cor', cor)
+      if (error) { setSaveError('Erro ao salvar critério de qualidade.'); return }
+      router.refresh()
     } finally {
       setSavingQual(null)
     }
@@ -59,8 +65,10 @@ export function ConfiguracoesClient({ materias, qualidade, usuarios }: Props) {
 
   async function alterarCargo(id: string, cargo: 'admin' | 'operador') {
     setSavingCargo(id)
+    setSaveError('')
     try {
-      await supabase.from('profiles').update({ cargo }).eq('id', id)
+      const { error } = await supabase.from('profiles').update({ cargo }).eq('id', id)
+      if (error) { setSaveError('Erro ao alterar cargo.'); return }
       router.refresh()
     } finally {
       setSavingCargo(null)
@@ -70,6 +78,10 @@ export function ConfiguracoesClient({ materias, qualidade, usuarios }: Props) {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Configurações</h1>
+
+      {saveError && (
+        <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded px-3 py-2">{saveError}</p>
+      )}
 
       {/* Estoque mínimo */}
       <Card>
