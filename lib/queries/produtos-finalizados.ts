@@ -22,7 +22,7 @@ export async function getProdutosComSaldo(): Promise<ProdutoFinalizadoComSaldo[]
   })
 }
 
-export async function getProdutoComHistorico(id: string) {
+export async function getProdutoComHistorico(id: string): Promise<(ProdutoFinalizadoComSaldo & { movimentacoes: MovimentacaoPF[] }) | null> {
   const supabase = await createClient()
   const { data: pf } = await supabase
     .from('produtos_finalizados')
