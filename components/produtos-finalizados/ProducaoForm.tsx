@@ -84,7 +84,7 @@ export function ProducaoForm({ produtoId, onClose }: Props) {
       </div>
       <div className="grid grid-cols-3 gap-3">
         <div className="space-y-1">
-          <Label className="text-green-700">🟢 Caixas Verdes</Label>
+          <Label className="text-green-700">🟢 Verdes</Label>
           <Input
             type="number"
             min="0"
