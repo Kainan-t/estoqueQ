@@ -5,6 +5,13 @@ import type { MateriaPrimaComSaldo } from '@/types'
 interface Props { materias: MateriaPrimaComSaldo[] }
 
 export function MPList({ materias }: Props) {
+  if (materias.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground py-8 text-center">
+        Nenhuma matéria-prima cadastrada.
+      </p>
+    )
+  }
   return (
     <ul className="space-y-2">
       {materias.map(mp => (

@@ -91,7 +91,9 @@ export function MPDetail({ mp }: Props) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {dialog === 'entrada' ? 'Registrar Entrada' : 'Registrar Consumo'} — {mp.nome}
+              {dialog
+                ? `${dialog === 'entrada' ? 'Registrar Entrada' : 'Registrar Consumo'} — ${mp.nome}`
+                : ''}
             </DialogTitle>
           </DialogHeader>
           {dialog && (
@@ -99,6 +101,7 @@ export function MPDetail({ mp }: Props) {
               materiaPrimaId={mp.id}
               tipo={dialog}
               saldoAtual={mp.saldo}
+              unidade={mp.unidade}
               onClose={() => setDialog(null)}
             />
           )}

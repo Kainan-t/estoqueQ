@@ -10,5 +10,5 @@ export default async function MateriaPrimaDetailPage({
   const { id } = await params
   const mp = await getMateriaPrimaComHistorico(id)
   if (!mp) notFound()
-  return <MPDetail mp={mp as any} />
+  return <MPDetail mp={mp} />
 }

@@ -22,7 +22,7 @@ export async function getMateriasComSaldo(): Promise<MateriaPrimaComSaldo[]> {
   })
 }
 
-export async function getMateriaPrimaComHistorico(id: string) {
+export async function getMateriaPrimaComHistorico(id: string): Promise<MateriaPrimaComSaldo | null> {
   const supabase = await createClient()
   const [{ data: mp }, { data: movs }] = await Promise.all([
     supabase.from('materias_primas').select('*').eq('id', id).single(),
@@ -40,8 +40,8 @@ export async function getMateriaPrimaComHistorico(id: string) {
     ...mp,
     saldo,
     em_alerta: saldo <= mp.estoque_minimo, // alert fires at or below minimum (intentional <=)
-    movimentacoes: movs ?? [],
-  }
+    movimentacoes: (movs ?? []) as MovimentacaoMP[],
+  } as MateriaPrimaComSaldo
 }
 
 export async function registrarMovimentacaoMP(data: {

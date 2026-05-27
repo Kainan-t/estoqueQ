@@ -11,10 +11,11 @@ interface Props {
   materiaPrimaId: string
   tipo: 'entrada' | 'saida'
   saldoAtual: number
+  unidade: string
   onClose: () => void
 }
 
-export function MovimentacaoMPForm({ materiaPrimaId, tipo, saldoAtual, onClose }: Props) {
+export function MovimentacaoMPForm({ materiaPrimaId, tipo, saldoAtual, unidade, onClose }: Props) {
   const router = useRouter()
   const [quantidade, setQuantidade] = useState('')
   const [data, setData] = useState(new Date().toISOString().split('T')[0])
@@ -24,17 +25,17 @@ export function MovimentacaoMPForm({ materiaPrimaId, tipo, saldoAtual, onClose }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setError('')
     const qtd = parseFloat(quantidade)
     if (isNaN(qtd) || qtd <= 0) {
       setError('Quantidade deve ser maior que zero.')
       return
     }
     if (tipo === 'saida' && qtd > saldoAtual) {
-      setError(`Saldo insuficiente. Disponível: ${saldoAtual.toFixed(1)} kg`)
+      setError(`Saldo insuficiente. Disponível: ${saldoAtual.toFixed(1)} ${unidade}`)
       return
     }
     setLoading(true)
-    setError('')
     try {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
@@ -64,7 +65,7 @@ export function MovimentacaoMPForm({ materiaPrimaId, tipo, saldoAtual, onClose }
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="quantidade">Quantidade (kg)</Label>
+        <Label htmlFor="quantidade">Quantidade ({unidade})</Label>
         <Input
           id="quantidade"
           type="number"
