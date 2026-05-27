@@ -15,7 +15,7 @@ export function calcularSaldoPF(movimentacoes: MovimentacaoPF[]): SaldoPF {
       cx_verdes += mov.cx_verdes
       cx_amarelas += mov.cx_amarelas
       cx_vermelhas += mov.cx_vermelhas
-      if (mov.metros_por_caixa) {
+      if (mov.metros_por_caixa !== null) {
         const cx = mov.cx_verdes + mov.cx_amarelas + mov.cx_vermelhas
         total_metros += cx * mov.metros_por_caixa
         total_caixas_prod += cx
@@ -27,12 +27,15 @@ export function calcularSaldoPF(movimentacoes: MovimentacaoPF[]): SaldoPF {
     }
   }
 
-  const total_caixas = Math.max(0, cx_verdes + cx_amarelas + cx_vermelhas)
+  const v = Math.max(0, cx_verdes)
+  const a = Math.max(0, cx_amarelas)
+  const r = Math.max(0, cx_vermelhas)
+  const total_caixas = v + a + r
   const media = total_caixas_prod > 0 ? total_metros / total_caixas_prod : 0
   return {
-    cx_verdes: Math.max(0, cx_verdes),
-    cx_amarelas: Math.max(0, cx_amarelas),
-    cx_vermelhas: Math.max(0, cx_vermelhas),
+    cx_verdes: v,
+    cx_amarelas: a,
+    cx_vermelhas: r,
     total_caixas,
     metros_estimados: Math.round(total_caixas * media),
   }

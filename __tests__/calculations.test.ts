@@ -82,4 +82,20 @@ describe('calcularSaldoPF', () => {
     const result = calcularSaldoPF(movs)
     expect(result.metros_estimados).toBe(200)
   })
+
+  it('clamp: total_caixas equals soma das cores clamped, nunca negativo', () => {
+    // Produce 3 green + 5 yellow, then ship 5 green (over-expediting green)
+    const movs: MovimentacaoPF[] = [
+      { ...basePF, tipo: 'producao', metros_por_caixa: 10,
+        cx_verdes: 3, cx_amarelas: 5, cx_vermelhas: 0 },
+      { ...basePF, tipo: 'expedicao', metros_por_caixa: null,
+        cx_verdes: 5, cx_amarelas: 0, cx_vermelhas: 0 },
+    ]
+    const result = calcularSaldoPF(movs)
+    expect(result.cx_verdes).toBe(0)          // clamped from -2
+    expect(result.cx_amarelas).toBe(5)
+    expect(result.cx_vermelhas).toBe(0)
+    expect(result.total_caixas).toBe(5)        // 0 + 5 + 0, not raw -2+5+0=3
+    expect(result.cx_verdes + result.cx_amarelas + result.cx_vermelhas).toBe(result.total_caixas)
+  })
 })
