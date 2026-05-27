@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx'
 
 export function exportMPToXLSX(rows: {
-  nome: string; entradas: number; saidas: number; saldo: number; unidade: string
+  nome: string; entradas: number; saidas: number; saldo: number
 }[]): Uint8Array {
   const data = rows.map(r => ({
     'Material': r.nome,

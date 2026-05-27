@@ -7,42 +7,48 @@ export async function GET(req: NextRequest) {
   const tipo = searchParams.get('tipo') // 'mp' | 'pf'
   const inicio = searchParams.get('inicio')
   const fim = searchParams.get('fim')
+  const label_inicio = inicio ?? 'all'
+  const label_fim = fim ?? 'all'
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   if (tipo === 'mp') {
-    const { data: materias } = await supabase.from('materias_primas').select('id, nome')
-    const { data: movs } = await supabase
+    const { data: materias, error: e1 } = await supabase.from('materias_primas').select('id, nome')
+    const { data: movs, error: e2 } = await supabase
       .from('movimentacoes_mp')
       .select('materia_prima_id, tipo, quantidade')
       .gte('data', inicio ?? '2000-01-01')
       .lte('data', fim ?? '2099-12-31')
 
+    if (e1 || e2) return NextResponse.json({ error: 'Erro ao buscar dados' }, { status: 500 })
+
     const rows = (materias ?? []).map((mp: any) => {
       const movsDoMp = (movs ?? []).filter((m: any) => m.materia_prima_id === mp.id)
       const entradas = movsDoMp.filter((m: any) => m.tipo === 'entrada').reduce((s: number, m: any) => s + m.quantidade, 0)
       const saidas = movsDoMp.filter((m: any) => m.tipo === 'saida').reduce((s: number, m: any) => s + m.quantidade, 0)
-      return { nome: mp.nome, entradas, saidas, saldo: entradas - saidas, unidade: 'kg' }
+      return { nome: mp.nome, entradas, saidas, saldo: entradas - saidas }
     })
 
     const buffer = exportMPToXLSX(rows)
     return new NextResponse(buffer as unknown as BodyInit, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="relatorio-mp-${inicio}-${fim}.xlsx"`,
+        'Content-Disposition': `attachment; filename="relatorio-mp-${label_inicio}-${label_fim}.xlsx"`,
       },
     })
   }
 
   if (tipo === 'pf') {
-    const { data: produtos } = await supabase.from('produtos_finalizados').select('id, nome')
-    const { data: movs } = await supabase
+    const { data: produtos, error: e1 } = await supabase.from('produtos_finalizados').select('id, nome')
+    const { data: movs, error: e2 } = await supabase
       .from('movimentacoes_pf')
       .select('produto_id, tipo, cx_verdes, cx_amarelas, cx_vermelhas')
       .gte('data', inicio ?? '2000-01-01')
       .lte('data', fim ?? '2099-12-31')
+
+    if (e1 || e2) return NextResponse.json({ error: 'Erro ao buscar dados' }, { status: 500 })
 
     const rows = (produtos ?? []).map((pf: any) => {
       const movsDoPf = (movs ?? []).filter((m: any) => m.produto_id === pf.id)
@@ -64,7 +70,7 @@ export async function GET(req: NextRequest) {
     return new NextResponse(buffer as unknown as BodyInit, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="relatorio-pf-${inicio}-${fim}.xlsx"`,
+        'Content-Disposition': `attachment; filename="relatorio-pf-${label_inicio}-${label_fim}.xlsx"`,
       },
     })
   }

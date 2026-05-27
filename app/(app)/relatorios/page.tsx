@@ -17,10 +17,28 @@ export default function RelatoriosPage() {
   const defaults = getMonthRange()
   const [inicio, setInicio] = useState(defaults.inicio)
   const [fim, setFim] = useState(defaults.fim)
+  const [loading, setLoading] = useState<'mp' | 'pf' | null>(null)
+  const [error, setError] = useState('')
 
-  function downloadExport(tipo: 'mp' | 'pf') {
-    const url = `/api/export?tipo=${tipo}&inicio=${inicio}&fim=${fim}`
-    window.open(url, '_blank')
+  async function downloadExport(tipo: 'mp' | 'pf') {
+    setLoading(tipo)
+    setError('')
+    try {
+      const url = `/api/export?tipo=${tipo}&inicio=${inicio}&fim=${fim}`
+      const res = await fetch(url)
+      if (!res.ok) {
+        setError('Erro ao gerar relatório. Tente novamente.')
+        return
+      }
+      const blob = await res.blob()
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = `relatorio-${tipo}-${inicio}-${fim}.xlsx`
+      a.click()
+      URL.revokeObjectURL(a.href)
+    } finally {
+      setLoading(null)
+    }
   }
 
   return (
@@ -40,6 +58,7 @@ export default function RelatoriosPage() {
               <Input type="date" value={fim} onChange={e => setFim(e.target.value)} />
             </div>
           </div>
+          {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
         </CardContent>
       </Card>
 
@@ -50,8 +69,8 @@ export default function RelatoriosPage() {
             <p className="text-sm text-muted-foreground mb-4">
               Entradas, saídas e saldo atual de cada matéria-prima no período selecionado.
             </p>
-            <Button onClick={() => downloadExport('mp')} className="w-full">
-              ⬇️ Exportar Excel (.xlsx)
+            <Button onClick={() => downloadExport('mp')} className="w-full" disabled={loading !== null}>
+              {loading === 'mp' ? 'Gerando...' : '⬇️ Exportar Excel (.xlsx)'}
             </Button>
           </CardContent>
         </Card>
@@ -61,8 +80,8 @@ export default function RelatoriosPage() {
             <p className="text-sm text-muted-foreground mb-4">
               Produção, expedição e saldo por qualidade de cada produto no período.
             </p>
-            <Button onClick={() => downloadExport('pf')} className="w-full">
-              ⬇️ Exportar Excel (.xlsx)
+            <Button onClick={() => downloadExport('pf')} className="w-full" disabled={loading !== null}>
+              {loading === 'pf' ? 'Gerando...' : '⬇️ Exportar Excel (.xlsx)'}
             </Button>
           </CardContent>
         </Card>
