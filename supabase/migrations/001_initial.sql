@@ -107,14 +107,17 @@ alter table public.movimentacoes_pf enable row level security;
 alter table public.configuracoes_qualidade enable row level security;
 
 -- All authenticated users can read
-create policy "auth read profiles" on public.profiles for select using (auth.role() = 'authenticated');
-create policy "auth read mp" on public.materias_primas for select using (auth.role() = 'authenticated');
-create policy "auth read mov_mp" on public.movimentacoes_mp for select using (auth.role() = 'authenticated');
+create policy "auth read profiles" on public.profiles for select using ((select auth.uid()) is not null);
+create policy "auth read mp" on public.materias_primas for select using ((select auth.uid()) is not null);
+create policy "auth read mov_mp" on public.movimentacoes_mp for select using ((select auth.uid()) is not null);
 create policy "auth insert mov_mp" on public.movimentacoes_mp for insert with check (auth.uid() = usuario_id);
-create policy "auth read pf" on public.produtos_finalizados for select using (auth.role() = 'authenticated');
-create policy "auth read mov_pf" on public.movimentacoes_pf for select using (auth.role() = 'authenticated');
+create policy "auth read pf" on public.produtos_finalizados for select using ((select auth.uid()) is not null);
+create policy "auth read mov_pf" on public.movimentacoes_pf for select using ((select auth.uid()) is not null);
 create policy "auth insert mov_pf" on public.movimentacoes_pf for insert with check (auth.uid() = usuario_id);
-create policy "auth read qualidade" on public.configuracoes_qualidade for select using (auth.role() = 'authenticated');
+-- NOTE: Movement tables (movimentacoes_mp, movimentacoes_pf) are intentionally
+-- immutable — no UPDATE or DELETE policies are defined. This preserves audit trail integrity.
+-- To correct an error, insert a compensating entry (e.g., negative/opposite movement).
+create policy "auth read qualidade" on public.configuracoes_qualidade for select using ((select auth.uid()) is not null);
 
 -- Admin-only write on config tables
 create policy "admin update mp" on public.materias_primas for update
@@ -127,6 +130,10 @@ create policy "admin insert pf" on public.produtos_finalizados for insert
   with check (exists (select 1 from public.profiles where id = auth.uid() and cargo = 'admin'));
 create policy "admin update qualidade" on public.configuracoes_qualidade for update
   using (exists (select 1 from public.profiles where id = auth.uid() and cargo = 'admin'));
+create policy "admin insert qualidade" on public.configuracoes_qualidade for insert
+  with check (exists (select 1 from public.profiles where id = auth.uid() and cargo = 'admin'));
+-- Admins can update any profile (for user management / cargo changes).
+-- Users can update their own profile. Both policies are intentional (OR logic).
 create policy "admin update profiles" on public.profiles for update
   using (exists (select 1 from public.profiles where id = auth.uid() and cargo = 'admin'));
 create policy "user update own profile" on public.profiles for update
