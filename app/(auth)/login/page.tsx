@@ -19,15 +19,18 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      setError('E-mail ou senha inválidos.')
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        setError('E-mail ou senha inválidos.')
+        return
+      }
+      router.refresh()
+      router.push('/dashboard')
+    } finally {
       setLoading(false)
-      return
     }
-    router.push('/dashboard')
-    router.refresh()
   }
 
   return (
