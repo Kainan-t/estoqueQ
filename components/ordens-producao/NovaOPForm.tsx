@@ -76,7 +76,7 @@ export function NovaOPForm({ peliculas, materias }: Props) {
 
       const { data: op, error: opErr } = await supabase
         .from('ordens_producao')
-        .insert({ observacao: observacao || null, usuario_id: user.id })
+        .insert({ observacao: observacao.trim() || null, usuario_id: user.id })
         .select('id')
         .single()
       if (opErr || !op) { setError('Erro ao criar OP. Tente novamente.'); return }
@@ -88,9 +88,16 @@ export function NovaOPForm({ peliculas, materias }: Props) {
         quantidade: parseFloat(item.quantidade),
       }))
       const { error: itensErr } = await supabase.from('ordens_producao_itens').insert(itensPayload)
-      if (itensErr) { setError('Erro ao salvar itens. Tente novamente.'); return }
+      if (itensErr) {
+        // Compensating delete: remove the orphan OP header so the DB stays consistent
+        await supabase.from('ordens_producao').delete().eq('id', op.id)
+        setError('Erro ao salvar itens. Tente novamente.')
+        return
+      }
 
       router.push('/ordens-producao')
+    } catch {
+      setError('Erro inesperado. Tente novamente.')
     } finally {
       setLoading(false)
     }
@@ -226,7 +233,7 @@ export function NovaOPForm({ peliculas, materias }: Props) {
         <Button type="submit" disabled={loading}>
           {loading ? 'Criando...' : 'Criar OP'}
         </Button>
-        <Button type="button" variant="outline" onClick={() => router.push('/ordens-producao')}>
+        <Button type="button" variant="outline" disabled={loading} onClick={() => router.push('/ordens-producao')}>
           Cancelar
         </Button>
       </div>
