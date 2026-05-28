@@ -53,7 +53,15 @@ export interface MovimentacaoPF {
   usuario_id: string
   observacao: string | null
   created_at: string
+  ordem_producao_id?: string | null
+  metros_cortados?: number | null
   profiles?: Pick<Profile, 'nome'>
+}
+
+export interface RegistroCorte extends MovimentacaoPF {
+  tipo: 'producao'
+  produtos_finalizados?: Pick<ProdutoFinalizado, 'nome'>
+  ordens_producao?: Pick<OrdemProducao, 'numero'>
 }
 
 export interface SaldoPF {
