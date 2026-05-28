@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { exportMPToXLSX, exportPFToXLSX } from '@/lib/export'
+import { exportMPToXLSX, exportPFToXLSX, exportPeliculasToXLSX } from '@/lib/export'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
@@ -71,6 +71,33 @@ export async function GET(req: NextRequest) {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'Content-Disposition': `attachment; filename="relatorio-pf-${label_inicio}-${label_fim}.xlsx"`,
+      },
+    })
+  }
+
+  if (tipo === 'pelicula') {
+    const { data: peliculas, error: e1 } = await supabase
+      .from('peliculas').select('id, nome, largura, tonalidade, espessura')
+    const { data: movs, error: e2 } = await supabase
+      .from('movimentacoes_pelicula')
+      .select('pelicula_id, tipo, quantidade_metros')
+      .gte('data', inicio ?? '2000-01-01')
+      .lte('data', fim ?? '2099-12-31')
+
+    if (e1 || e2) return NextResponse.json({ error: 'Erro ao buscar dados' }, { status: 500 })
+
+    const rows = (peliculas ?? []).map((p: any) => {
+      const movsDaP = (movs ?? []).filter((m: any) => m.pelicula_id === p.id)
+      const entradas = movsDaP.filter((m: any) => m.tipo === 'entrada').reduce((s: number, m: any) => s + m.quantidade_metros, 0)
+      const saidas = movsDaP.filter((m: any) => m.tipo === 'saida').reduce((s: number, m: any) => s + m.quantidade_metros, 0)
+      return { nome: p.nome, largura: p.largura, tonalidade: p.tonalidade, espessura: p.espessura, entradas, saidas, saldo: entradas - saidas }
+    })
+
+    const buffer = exportPeliculasToXLSX(rows)
+    return new NextResponse(buffer as unknown as BodyInit, {
+      headers: {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': `attachment; filename="relatorio-peliculas-${label_inicio}-${label_fim}.xlsx"`,
       },
     })
   }

@@ -24,7 +24,18 @@ interface PFMovement {
   profiles?: { nome: string } | null
 }
 
-type Movement = MPMovement | PFMovement
+interface PeliculaMovement {
+  id: string
+  kind: 'pelicula'
+  tipo: 'entrada' | 'saida'
+  nome_material: string
+  quantidade_metros: number
+  data: string
+  created_at: string
+  profiles?: { nome: string } | null
+}
+
+type Movement = MPMovement | PFMovement | PeliculaMovement
 
 interface Props { movements: Movement[] }
 
@@ -49,6 +60,14 @@ export function RecentMovements({ movements }: Props) {
                     </span>{' '}
                     {m.tipo === 'entrada' ? 'Entrada' : 'Consumo'}: {m.nome_material} —{' '}
                     {(m as MPMovement).quantidade} kg
+                  </span>
+                ) : m.kind === 'pelicula' ? (
+                  <span>
+                    <span className={m.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}>
+                      {m.tipo === 'entrada' ? '↑' : '↓'}
+                    </span>{' '}
+                    {m.tipo === 'entrada' ? 'Entrada' : 'Consumo'}: 🎞️ {(m as PeliculaMovement).nome_material} —{' '}
+                    {(m as PeliculaMovement).quantidade_metros.toFixed(1)} m
                   </span>
                 ) : (
                   <span>

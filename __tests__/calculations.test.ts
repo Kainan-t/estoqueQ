@@ -1,5 +1,5 @@
-import { calcularSaldoMP, calcularSaldoPF } from '@/lib/calculations'
-import type { MovimentacaoMP, MovimentacaoPF } from '@/types'
+import { calcularSaldoMP, calcularSaldoPF, calcularSaldoPelicula } from '@/lib/calculations'
+import type { MovimentacaoMP, MovimentacaoPF, MovimentacaoPelicula } from '@/types'
 
 const baseMov = {
   id: '1', materia_prima_id: 'mp1', data: '2026-05-01',
@@ -97,5 +97,32 @@ describe('calcularSaldoPF', () => {
     expect(result.cx_vermelhas).toBe(0)
     expect(result.total_caixas).toBe(5)        // 0 + 5 + 0, not raw -2+5+0=3
     expect(result.cx_verdes + result.cx_amarelas + result.cx_vermelhas).toBe(result.total_caixas)
+  })
+})
+
+const basePelicula = {
+  id: '1', pelicula_id: 'pel1', data: '2026-05-01',
+  usuario_id: 'u1', observacao: null, created_at: '2026-05-01',
+}
+
+describe('calcularSaldoPelicula', () => {
+  it('retorna 0 para lista vazia', () => {
+    expect(calcularSaldoPelicula([])).toBe(0)
+  })
+
+  it('soma entradas em metros', () => {
+    const movs: MovimentacaoPelicula[] = [
+      { ...basePelicula, tipo: 'entrada', quantidade_metros: 500 },
+      { ...basePelicula, tipo: 'entrada', quantidade_metros: 300 },
+    ]
+    expect(calcularSaldoPelicula(movs)).toBe(800)
+  })
+
+  it('subtrai saidas em metros', () => {
+    const movs: MovimentacaoPelicula[] = [
+      { ...basePelicula, tipo: 'entrada', quantidade_metros: 500 },
+      { ...basePelicula, tipo: 'saida', quantidade_metros: 200 },
+    ]
+    expect(calcularSaldoPelicula(movs)).toBe(300)
   })
 })

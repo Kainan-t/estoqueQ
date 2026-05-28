@@ -1,4 +1,4 @@
-import type { MovimentacaoMP, MovimentacaoPF, SaldoPF } from '@/types'
+import type { MovimentacaoMP, MovimentacaoPF, SaldoPF, MovimentacaoPelicula } from '@/types'
 
 export function calcularSaldoMP(movimentacoes: MovimentacaoMP[]): number {
   return movimentacoes.reduce((acc, mov) => {
@@ -39,4 +39,10 @@ export function calcularSaldoPF(movimentacoes: MovimentacaoPF[]): SaldoPF {
     total_caixas,
     metros_estimados: Math.round(total_caixas * media),
   }
+}
+
+export function calcularSaldoPelicula(movimentacoes: MovimentacaoPelicula[]): number {
+  return movimentacoes.reduce((acc, mov) => {
+    return mov.tipo === 'entrada' ? acc + mov.quantidade_metros : acc - mov.quantidade_metros
+  }, 0)
 }

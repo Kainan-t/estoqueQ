@@ -17,10 +17,10 @@ export default function RelatoriosPage() {
   const defaults = getMonthRange()
   const [inicio, setInicio] = useState(defaults.inicio)
   const [fim, setFim] = useState(defaults.fim)
-  const [loading, setLoading] = useState<'mp' | 'pf' | null>(null)
+  const [loading, setLoading] = useState<'mp' | 'pf' | 'pelicula' | null>(null)
   const [error, setError] = useState('')
 
-  async function downloadExport(tipo: 'mp' | 'pf') {
+  async function downloadExport(tipo: 'mp' | 'pf' | 'pelicula') {
     setLoading(tipo)
     setError('')
     try {
@@ -62,7 +62,7 @@ export default function RelatoriosPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card>
           <CardHeader><CardTitle className="text-base">🧪 Matérias-Primas</CardTitle></CardHeader>
           <CardContent>
@@ -82,6 +82,17 @@ export default function RelatoriosPage() {
             </p>
             <Button onClick={() => downloadExport('pf')} className="w-full" disabled={loading !== null}>
               {loading === 'pf' ? 'Gerando...' : '⬇️ Exportar Excel (.xlsx)'}
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle className="text-base">🎞️ Películas</CardTitle></CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Entradas, saídas e saldo atual de cada película no período selecionado.
+            </p>
+            <Button onClick={() => downloadExport('pelicula')} className="w-full" disabled={loading !== null}>
+              {loading === 'pelicula' ? 'Gerando...' : '⬇️ Exportar Excel (.xlsx)'}
             </Button>
           </CardContent>
         </Card>

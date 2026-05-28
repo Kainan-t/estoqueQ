@@ -79,3 +79,35 @@ export interface FiltroRelatorio {
   dataFim: string
   itemId?: string
 }
+
+export type TipoPelicula = 'entrada' | 'saida'
+
+export interface Pelicula {
+  id: string
+  nome: string
+  largura: string
+  tonalidade: string
+  espessura: string
+  protecao_uva: string
+  protecao_uvb: string
+  estoque_minimo: number
+  created_at: string
+}
+
+export interface MovimentacaoPelicula {
+  id: string
+  pelicula_id: string
+  tipo: TipoPelicula
+  quantidade_metros: number
+  data: string
+  usuario_id: string
+  observacao: string | null
+  created_at: string
+  profiles?: Pick<Profile, 'nome'>
+}
+
+export interface PeliculaComSaldo extends Pelicula {
+  saldo: number
+  em_alerta: boolean
+  movimentacoes?: MovimentacaoPelicula[]
+}

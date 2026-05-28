@@ -1,19 +1,21 @@
 import { createClient } from '@/lib/supabase/server'
 import { getMateriasComSaldo } from '@/lib/queries/materias-primas'
 import { getProdutosComSaldo } from '@/lib/queries/produtos-finalizados'
+import { getPeliculasComSaldo } from '@/lib/queries/peliculas'
 import { SummaryCards } from '@/components/dashboard/SummaryCards'
 import { StockAlerts } from '@/components/dashboard/StockAlerts'
 import { RecentMovements } from '@/components/dashboard/RecentMovements'
 
 export default async function DashboardPage() {
-  const [materias, produtos] = await Promise.all([
+  const [materias, produtos, peliculas] = await Promise.all([
     getMateriasComSaldo(),
     getProdutosComSaldo(),
+    getPeliculasComSaldo(),
   ])
 
   const supabase = await createClient()
 
-  const [{ data: movsMp }, { data: movsPf }] = await Promise.all([
+  const [{ data: movsMp }, { data: movsPf }, { data: movsPelicula }] = await Promise.all([
     supabase
       .from('movimentacoes_mp')
       .select('*, profiles(nome), materias_primas(nome)')
@@ -22,6 +24,11 @@ export default async function DashboardPage() {
     supabase
       .from('movimentacoes_pf')
       .select('*, profiles(nome), produtos_finalizados(nome)')
+      .order('created_at', { ascending: false })
+      .limit(5),
+    supabase
+      .from('movimentacoes_pelicula')
+      .select('*, profiles(nome), peliculas(nome)')
       .order('created_at', { ascending: false })
       .limit(5),
   ])
@@ -38,17 +45,21 @@ export default async function DashboardPage() {
     nome_produto: m.produtos_finalizados?.nome ?? '',
   }))
 
-  const allRecent = [...recentMP, ...recentPF]
+  const recentPelicula = (movsPelicula ?? []).map((m: any) => ({
+    ...m, kind: 'pelicula' as const, nome_material: m.peliculas?.nome ?? '',
+  }))
+
+  const allRecent = [...recentMP, ...recentPF, ...recentPelicula]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 5)
 
-  const alertas = materias.filter(m => m.em_alerta).length
+  const alertas = materias.filter(m => m.em_alerta).length + peliculas.filter(p => p.em_alerta).length
 
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
       <SummaryCards totalMP={materias.length} totalPF={produtos.length} alertas={alertas} />
-      <StockAlerts materias={materias} />
+      <StockAlerts materias={materias} peliculas={peliculas} />
       <RecentMovements movements={allRecent as any} />
     </div>
   )

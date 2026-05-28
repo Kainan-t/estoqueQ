@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: '📊' },
   { href: '/materias-primas', label: 'Matéria-Prima', icon: '🧪' },
+  { href: '/peliculas', label: 'Películas', icon: '🎞️' },
   { href: '/produtos-finalizados', label: 'Prod. Finalizado', icon: '📦' },
   { href: '/relatorios', label: 'Relatórios', icon: '📈' },
   { href: '/configuracoes', label: 'Configurações', icon: '⚙️' },
