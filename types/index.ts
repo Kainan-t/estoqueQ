@@ -111,3 +111,30 @@ export interface PeliculaComSaldo extends Pelicula {
   em_alerta: boolean
   movimentacoes?: MovimentacaoPelicula[]
 }
+
+export type StatusOP = 'rascunho' | 'emitida' | 'cancelada'
+
+export interface OrdemProducao {
+  id: string
+  numero: string
+  status: StatusOP
+  observacao: string | null
+  usuario_id: string
+  created_at: string
+  emitida_at: string | null
+}
+
+export interface OrdemProducaoItem {
+  id: string
+  ordem_id: string
+  pelicula_id: string | null
+  materia_prima_id: string | null
+  quantidade: number
+  peliculas?: Pick<Pelicula, 'nome' | 'largura' | 'tonalidade' | 'espessura'>
+  materias_primas?: Pick<MateriaPrima, 'nome' | 'unidade'>
+}
+
+export interface OrdemProducaoComItens extends OrdemProducao {
+  itens: OrdemProducaoItem[]
+  profiles?: Pick<Profile, 'nome'>
+}
