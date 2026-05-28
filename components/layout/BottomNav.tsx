@@ -8,6 +8,7 @@ const navItems = [
   { href: '/dashboard', label: 'Início', icon: '📊' },
   { href: '/materias-primas', label: 'MP', icon: '🧪' },
   { href: '/peliculas', label: 'Pelíc.', icon: '🎞️' },
+  { href: '/ordens-producao', label: 'OPs', icon: '📋' },
   { href: '/produtos-finalizados', label: 'PF', icon: '📦' },
   { href: '/relatorios', label: 'Relatórios', icon: '📈' },
   { href: '/configuracoes', label: 'Config', icon: '⚙️' },
