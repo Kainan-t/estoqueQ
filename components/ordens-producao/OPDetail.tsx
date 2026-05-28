@@ -72,7 +72,6 @@ export function OPDetail({ ordem }: Props) {
               </div>
               <p className="text-sm text-muted-foreground">
                 Criado em: {new Date(ordem.created_at).toLocaleDateString('pt-BR')}
-                {ordem.profiles?.nome && <span> · por {ordem.profiles.nome}</span>}
               </p>
               {ordem.status === 'emitida' && ordem.emitida_at && (
                 <p className="text-sm text-muted-foreground">

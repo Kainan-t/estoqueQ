@@ -136,5 +136,4 @@ export interface OrdemProducaoItem {
 
 export interface OrdemProducaoComItens extends OrdemProducao {
   itens: OrdemProducaoItem[]
-  profiles?: Pick<Profile, 'nome'>
 }
