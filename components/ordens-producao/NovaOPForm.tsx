@@ -14,31 +14,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import type { Mescla } from '@/types'
 
 interface Props {
   peliculas: { id: string; nome: string; largura: string; tonalidade: string; espessura: string }[]
-  materias: { id: string; nome: string; unidade: string }[]
+  mesclas: Mescla[]
 }
 
 type ItemForm = {
   id: string
-  tipo_recurso: 'pelicula' | 'mp'
+  tipo_recurso: 'pelicula' | 'mescla'
   pelicula_id: string
-  materia_prima_id: string
+  mescla_id: string
   quantidade: string
 }
 
 function newItem(): ItemForm {
   return {
     id: crypto.randomUUID(),
-    tipo_recurso: 'pelicula',
+    tipo_recurso: 'mescla',
     pelicula_id: '',
-    materia_prima_id: '',
+    mescla_id: '',
     quantidade: '',
   }
 }
 
-export function NovaOPForm({ peliculas, materias }: Props) {
+export function NovaOPForm({ peliculas, mesclas }: Props) {
   const router = useRouter()
   const [observacao, setObservacao] = useState('')
   const [items, setItems] = useState<ItemForm[]>([newItem()])
@@ -49,12 +50,8 @@ export function NovaOPForm({ peliculas, materias }: Props) {
     setItems(prev => prev.map(item => (item.id === id ? { ...item, ...patch } : item)))
   }
 
-  function addItem() {
-    setItems(prev => [...prev, newItem()])
-  }
-
-  function removeItem(id: string) {
-    setItems(prev => prev.filter(item => item.id !== id))
+  function getMescla(id: string) {
+    return mesclas.find(m => m.id === id)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -62,10 +59,13 @@ export function NovaOPForm({ peliculas, materias }: Props) {
     setError('')
 
     for (const item of items) {
-      const id = item.tipo_recurso === 'pelicula' ? item.pelicula_id : item.materia_prima_id
-      if (!id) { setError('Selecione um item para cada linha.'); return }
+      const refId = item.tipo_recurso === 'pelicula' ? item.pelicula_id : item.mescla_id
+      if (!refId) { setError('Selecione um item para cada linha.'); return }
       const qtd = parseFloat(item.quantidade)
       if (isNaN(qtd) || qtd <= 0) { setError('Quantidade deve ser maior que zero.'); return }
+      if (item.tipo_recurso === 'mescla' && !Number.isInteger(qtd)) {
+        setError('Número de mesclas deve ser inteiro.'); return
+      }
     }
 
     setLoading(true)
@@ -84,12 +84,12 @@ export function NovaOPForm({ peliculas, materias }: Props) {
       const itensPayload = items.map(item => ({
         ordem_id: op.id,
         pelicula_id: item.tipo_recurso === 'pelicula' ? item.pelicula_id : null,
-        materia_prima_id: item.tipo_recurso === 'mp' ? item.materia_prima_id : null,
+        mescla_id: item.tipo_recurso === 'mescla' ? item.mescla_id : null,
+        materia_prima_id: null,
         quantidade: parseFloat(item.quantidade),
       }))
       const { error: itensErr } = await supabase.from('ordens_producao_itens').insert(itensPayload)
       if (itensErr) {
-        // Compensating delete: remove the orphan OP header so the DB stays consistent
         await supabase.from('ordens_producao').delete().eq('id', op.id)
         setError('Erro ao salvar itens. Tente novamente.')
         return
@@ -106,9 +106,7 @@ export function NovaOPForm({ peliculas, materias }: Props) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle>Observação</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Observação</CardTitle></CardHeader>
         <CardContent>
           <div className="space-y-2">
             <Label htmlFor="observacao">Observação (opcional)</Label>
@@ -124,104 +122,118 @@ export function NovaOPForm({ peliculas, materias }: Props) {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Itens da OP</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Itens da OP</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          {items.map((item, index) => (
-            <div key={item.id} className="flex flex-col gap-3 p-3 rounded-lg border border-border bg-muted/30">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-muted-foreground">Item {index + 1}</span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={items.length === 1}
-                  onClick={() => removeItem(item.id)}
-                  className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                >
-                  ×
-                </Button>
-              </div>
+          {items.map((item, index) => {
+            const mescla = item.tipo_recurso === 'mescla' ? getMescla(item.mescla_id) : null
+            const qtd = parseFloat(item.quantidade)
+            const showPreview = mescla && !isNaN(qtd) && qtd > 0 && Number.isInteger(qtd)
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div className="space-y-1">
-                  <Label>Tipo</Label>
-                  <Select
-                    value={item.tipo_recurso}
-                    onValueChange={(value: 'pelicula' | 'mp') =>
-                      updateItem(item.id, {
-                        tipo_recurso: value,
-                        pelicula_id: '',
-                        materia_prima_id: '',
-                      })
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pelicula">Película</SelectItem>
-                      <SelectItem value="mp">Matéria-Prima</SelectItem>
-                    </SelectContent>
-                  </Select>
+            return (
+              <div key={item.id} className="flex flex-col gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">Item {index + 1}</span>
+                  <Button
+                    type="button" variant="outline" size="sm"
+                    disabled={items.length === 1}
+                    onClick={() => setItems(prev => prev.filter(i => i.id !== item.id))}
+                    className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                  >×</Button>
                 </div>
 
-                <div className="space-y-1">
-                  <Label>
-                    {item.tipo_recurso === 'pelicula' ? 'Película' : 'Matéria-Prima'}
-                  </Label>
-                  {item.tipo_recurso === 'pelicula' ? (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  {/* Tipo */}
+                  <div className="space-y-1">
+                    <Label>Tipo</Label>
                     <Select
-                      value={item.pelicula_id}
-                      onValueChange={value => updateItem(item.id, { pelicula_id: value })}
+                      value={item.tipo_recurso}
+                      onValueChange={(value: 'pelicula' | 'mescla') =>
+                        updateItem(item.id, { tipo_recurso: value, pelicula_id: '', mescla_id: '', quantidade: '' })
+                      }
                     >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Selecione uma película..." />
-                      </SelectTrigger>
+                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {peliculas.map(p => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.nome} — {p.largura} / {p.tonalidade}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="mescla">⚗️ Mescla</SelectItem>
+                        <SelectItem value="pelicula">🎞️ Película</SelectItem>
                       </SelectContent>
                     </Select>
-                  ) : (
-                    <Select
-                      value={item.materia_prima_id}
-                      onValueChange={value => updateItem(item.id, { materia_prima_id: value })}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Selecione uma matéria-prima..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {materias.map(m => (
-                          <SelectItem key={m.id} value={m.id}>
-                            {m.nome} ({m.unidade})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+                  </div>
+
+                  {/* Item específico */}
+                  <div className="space-y-1">
+                    <Label>{item.tipo_recurso === 'pelicula' ? 'Película' : 'Receita'}</Label>
+                    {item.tipo_recurso === 'pelicula' ? (
+                      <Select
+                        value={item.pelicula_id}
+                        onValueChange={value => updateItem(item.id, { pelicula_id: value })}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Selecione uma película..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {peliculas.map(p => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.nome} — {p.largura} / {p.tonalidade}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Select
+                        value={item.mescla_id}
+                        onValueChange={value => updateItem(item.id, { mescla_id: value })}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Selecione a mescla..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {mesclas.map(m => (
+                            <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+
+                  {/* Quantidade */}
+                  <div className="space-y-1">
+                    <Label>{item.tipo_recurso === 'pelicula' ? 'Metros (m)' : 'Nº de mesclas'}</Label>
+                    <Input
+                      type="number"
+                      step={item.tipo_recurso === 'mescla' ? '1' : '0.01'}
+                      min="1"
+                      value={item.quantidade}
+                      onChange={e => updateItem(item.id, { quantidade: e.target.value })}
+                      placeholder={item.tipo_recurso === 'mescla' ? '1' : '0.00'}
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-1">
-                  <Label>Quantidade</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    value={item.quantidade}
-                    onChange={e => updateItem(item.id, { quantidade: e.target.value })}
-                    placeholder="0.00"
-                  />
-                </div>
+                {/* Prévia dos ingredientes */}
+                {showPreview && mescla.mescla_ingredientes && (
+                  <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs space-y-1">
+                    <p className="font-semibold text-amber-800">
+                      ⚗️ {mescla.nome} × {qtd} — consumo calculado:
+                    </p>
+                    {mescla.mescla_ingredientes.map(ing => (
+                      <p key={ing.id} className="text-amber-700 pl-2">
+                        {ing.materias_primas?.nome ?? '—'}:{' '}
+                        <span className="font-medium">
+                          {(ing.quantidade_por_mescla * qtd).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} kg
+                        </span>
+                      </p>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            )
+          })}
 
-          <Button type="button" variant="outline" onClick={addItem} className="w-full">
+          <Button
+            type="button" variant="outline"
+            onClick={() => setItems(prev => [...prev, newItem()])}
+            className="w-full"
+          >
             ＋ Adicionar item
           </Button>
         </CardContent>
@@ -233,7 +245,8 @@ export function NovaOPForm({ peliculas, materias }: Props) {
         <Button type="submit" disabled={loading}>
           {loading ? 'Criando...' : 'Criar OP'}
         </Button>
-        <Button type="button" variant="outline" disabled={loading} onClick={() => router.push('/ordens-producao')}>
+        <Button type="button" variant="outline" disabled={loading}
+          onClick={() => router.push('/ordens-producao')}>
           Cancelar
         </Button>
       </div>

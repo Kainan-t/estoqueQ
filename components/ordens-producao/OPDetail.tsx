@@ -103,16 +103,19 @@ export function OPDetail({ ordem }: Props) {
               <tbody className="divide-y">
                 {ordem.itens.map((item) => {
                   const isPelicula = item.pelicula_id !== null
+                  const isMescla = item.mescla_id !== null
+                  const tipo = isPelicula ? '🎞️ Película' : isMescla ? '⚗️ Mescla' : '🧪 MP'
+                  const nome = item.peliculas?.nome ?? item.mesclas?.nome ?? item.materias_primas?.nome ?? '—'
+                  const qtdLabel = isPelicula
+                    ? `${item.quantidade.toFixed(1)} m`
+                    : isMescla
+                    ? `${item.quantidade} ${item.quantidade === 1 ? 'mescla' : 'mesclas'}`
+                    : `${item.quantidade.toFixed(2)} ${item.materias_primas?.unidade ?? 'kg'}`
                   return (
                     <tr key={item.id}>
-                      <td className="py-2">{isPelicula ? '🎞️ Película' : '🧪 MP'}</td>
-                      <td className="py-2">{item.peliculas?.nome ?? item.materias_primas?.nome ?? '—'}</td>
-                      <td className="py-2 text-right">
-                        {isPelicula
-                          ? `${item.quantidade.toFixed(1)} m`
-                          : `${item.quantidade.toFixed(2)} ${item.materias_primas?.unidade ?? 'kg'}`
-                        }
-                      </td>
+                      <td className="py-2">{tipo}</td>
+                      <td className="py-2">{nome}</td>
+                      <td className="py-2 text-right font-medium">{qtdLabel}</td>
                     </tr>
                   )
                 })}

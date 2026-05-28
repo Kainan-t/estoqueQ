@@ -124,14 +124,31 @@ export interface OrdemProducao {
   emitida_at: string | null
 }
 
+export interface MesclaIngrediente {
+  id: string
+  mescla_id: string
+  materia_prima_id: string
+  quantidade_por_mescla: number
+  materias_primas?: Pick<MateriaPrima, 'nome' | 'unidade'>
+}
+
+export interface Mescla {
+  id: string
+  nome: string
+  created_at: string
+  mescla_ingredientes?: MesclaIngrediente[]
+}
+
 export interface OrdemProducaoItem {
   id: string
   ordem_id: string
   pelicula_id: string | null
   materia_prima_id: string | null
+  mescla_id: string | null
   quantidade: number
   peliculas?: Pick<Pelicula, 'nome' | 'largura' | 'tonalidade' | 'espessura'>
   materias_primas?: Pick<MateriaPrima, 'nome' | 'unidade'>
+  mesclas?: Pick<Mescla, 'nome'>
 }
 
 export interface OrdemProducaoComItens extends OrdemProducao {
