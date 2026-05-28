@@ -1,19 +1,10 @@
-'use client'
-
 import Link from 'next/link'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { StatusBadge } from './StatusBadge'
 import type { OrdemProducaoComItens } from '@/types'
 
 interface Props {
   ordens: OrdemProducaoComItens[]
-}
-
-function StatusBadge({ status }: { status: string }) {
-  if (status === 'rascunho') return <Badge variant="outline">Rascunho</Badge>
-  if (status === 'emitida') return <Badge className="bg-blue-100 text-blue-700 border-blue-300">Emitida</Badge>
-  if (status === 'cancelada') return <Badge variant="destructive">Cancelada</Badge>
-  return null
 }
 
 export function OPList({ ordens }: Props) {

@@ -18,6 +18,10 @@ export async function getOrdemProducao(id: string): Promise<OrdemProducaoComIten
     .select('*, profiles(nome), ordens_producao_itens(*, peliculas(nome,largura,tonalidade,espessura), materias_primas(nome,unidade))')
     .eq('id', id)
     .single()
-  if (error) return null
+  if (error) {
+    // PGRST116 = row not found — expected; anything else is a real error
+    if (error.code === 'PGRST116') return null
+    throw new Error(error.message)
+  }
   return { ...data, itens: data.ordens_producao_itens ?? [] }
 }

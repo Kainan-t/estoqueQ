@@ -3,21 +3,14 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
+import { StatusBadge } from './StatusBadge'
 import type { OrdemProducaoComItens } from '@/types'
 
 interface Props {
   ordem: OrdemProducaoComItens
-}
-
-function StatusBadge({ status }: { status: string }) {
-  if (status === 'rascunho') return <Badge variant="outline">Rascunho</Badge>
-  if (status === 'emitida') return <Badge className="bg-blue-100 text-blue-700 border-blue-300">Emitida</Badge>
-  if (status === 'cancelada') return <Badge variant="destructive">Cancelada</Badge>
-  return null
 }
 
 export function OPDetail({ ordem }: Props) {
@@ -46,6 +39,7 @@ export function OPDetail({ ordem }: Props) {
   }
 
   async function handleCancelar() {
+    if (!window.confirm('Confirmar cancelamento desta ordem de produção? Esta ação não pode ser desfeita.')) return
     setError('')
     setLoading('cancelar')
     try {
