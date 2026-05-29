@@ -1,10 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import type { RegistroCorte } from '@/types'
 
-// Only join 'profiles' — the only confirmed FK on movimentacoes_pf.
-// 'produtos_finalizados' and 'ordens_producao' are fetched via separate queries
-// to avoid PostgREST "Could not find a relationship" errors.
-const CORTE_SELECT = '*, profiles(nome)'
+// No PostgREST relational joins — all related data fetched via separate .in() queries.
+// This avoids schema-cache issues after the ordem_producao_id FK was added.
+const CORTE_SELECT = '*'
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 
@@ -14,7 +13,7 @@ async function enrichCortes(
 ): Promise<RegistroCorte[]> {
   if (rows.length === 0) return rows
 
-  // Fetch produto names
+  // Produto names
   const produtoIds = [...new Set(rows.map(r => r.produto_id).filter(Boolean))] as string[]
   const { data: produtos } = await supabase
     .from('produtos_finalizados')
@@ -22,7 +21,7 @@ async function enrichCortes(
     .in('id', produtoIds)
   const prodMap = new Map((produtos ?? []).map(p => [p.id, { nome: p.nome }]))
 
-  // Fetch OP numbers
+  // OP numbers
   const opIds = [...new Set(rows.map(r => r.ordem_producao_id).filter(Boolean))] as string[]
   const opsMap = new Map<string, { numero: string }>()
   if (opIds.length > 0) {
@@ -33,10 +32,22 @@ async function enrichCortes(
     for (const op of ops ?? []) opsMap.set(op.id, { numero: op.numero })
   }
 
+  // Operator names
+  const userIds = [...new Set(rows.map(r => r.usuario_id).filter(Boolean))] as string[]
+  const profilesMap = new Map<string, { nome: string }>()
+  if (userIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, nome')
+      .in('id', userIds)
+    for (const p of profiles ?? []) profilesMap.set(p.id, { nome: p.nome })
+  }
+
   return rows.map(r => ({
     ...r,
     produtos_finalizados: prodMap.get(r.produto_id),
     ordens_producao: r.ordem_producao_id ? opsMap.get(r.ordem_producao_id) : undefined,
+    profiles: profilesMap.get(r.usuario_id),
   }))
 }
 
