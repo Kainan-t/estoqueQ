@@ -1,23 +1,41 @@
 import { createClient } from '@/lib/supabase/server'
 import type { RegistroCorte } from '@/types'
 
-// Does NOT join ordens_producao via FK — avoids PostgREST schema-cache dependency
-// for the newly-added ordem_producao_id column. OP info is fetched in a separate query.
-const CORTE_SELECT = '*, produtos_finalizados(nome), profiles(nome)'
+// Only join 'profiles' — the only confirmed FK on movimentacoes_pf.
+// 'produtos_finalizados' and 'ordens_producao' are fetched via separate queries
+// to avoid PostgREST "Could not find a relationship" errors.
+const CORTE_SELECT = '*, profiles(nome)'
 
-async function attachOPs(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>
+
+async function enrichCortes(
+  supabase: SupabaseClient,
   rows: RegistroCorte[]
 ): Promise<RegistroCorte[]> {
-  const ids = [...new Set(rows.map(r => r.ordem_producao_id).filter(Boolean))] as string[]
-  if (ids.length === 0) return rows
-  const { data: ops } = await supabase
-    .from('ordens_producao')
-    .select('id, numero')
-    .in('id', ids)
-  const opsMap = new Map((ops ?? []).map(op => [op.id, { numero: op.numero }]))
+  if (rows.length === 0) return rows
+
+  // Fetch produto names
+  const produtoIds = [...new Set(rows.map(r => r.produto_id).filter(Boolean))] as string[]
+  const { data: produtos } = await supabase
+    .from('produtos_finalizados')
+    .select('id, nome')
+    .in('id', produtoIds)
+  const prodMap = new Map((produtos ?? []).map(p => [p.id, { nome: p.nome }]))
+
+  // Fetch OP numbers
+  const opIds = [...new Set(rows.map(r => r.ordem_producao_id).filter(Boolean))] as string[]
+  const opsMap = new Map<string, { numero: string }>()
+  if (opIds.length > 0) {
+    const { data: ops } = await supabase
+      .from('ordens_producao')
+      .select('id, numero')
+      .in('id', opIds)
+    for (const op of ops ?? []) opsMap.set(op.id, { numero: op.numero })
+  }
+
   return rows.map(r => ({
     ...r,
+    produtos_finalizados: prodMap.get(r.produto_id),
     ordens_producao: r.ordem_producao_id ? opsMap.get(r.ordem_producao_id) : undefined,
   }))
 }
@@ -30,8 +48,7 @@ export async function getCortes(): Promise<RegistroCorte[]> {
     .eq('tipo', 'producao')
     .order('created_at', { ascending: false })
   if (error) throw new Error(error.message)
-  const rows = (data ?? []) as RegistroCorte[]
-  return attachOPs(supabase, rows)
+  return enrichCortes(supabase, (data ?? []) as RegistroCorte[])
 }
 
 export async function getCorte(id: string): Promise<RegistroCorte | null> {
@@ -46,7 +63,7 @@ export async function getCorte(id: string): Promise<RegistroCorte | null> {
     if (error.code === 'PGRST116') return null
     throw new Error(error.message)
   }
-  const rows = await attachOPs(supabase, [data as RegistroCorte])
+  const rows = await enrichCortes(supabase, [data as RegistroCorte])
   return rows[0] ?? null
 }
 
