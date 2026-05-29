@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge'
 interface OP {
   id: string
   numero: string
-  status: 'rascunho' | 'emitida' | 'cancelada'
+  status: 'rascunho' | 'emitida' | 'concluida' | 'cancelada'
   created_at: string
   emitida_at: string | null
   observacao: string | null
@@ -22,6 +22,12 @@ function StatusBadge({ status }: { status: OP['status'] }) {
     return (
       <Badge className="bg-blue-100 text-blue-700 border border-blue-300 text-xs shrink-0 hover:bg-blue-100">
         Emitida
+      </Badge>
+    )
+  if (status === 'concluida')
+    return (
+      <Badge className="bg-green-100 text-green-700 border border-green-300 text-xs shrink-0 hover:bg-green-100">
+        Concluída
       </Badge>
     )
   if (status === 'cancelada')

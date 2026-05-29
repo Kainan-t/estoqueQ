@@ -120,7 +120,34 @@ export interface PeliculaComSaldo extends Pelicula {
   movimentacoes?: MovimentacaoPelicula[]
 }
 
-export type StatusOP = 'rascunho' | 'emitida' | 'cancelada'
+export type StatusOP = 'rascunho' | 'emitida' | 'concluida' | 'cancelada'
+
+export interface StatusSetorRow {
+  id: string
+  op_id: string
+  setor: 'quimico' | 'maquina' | 'corte'
+  item_id: string
+  updated_at: string
+  usuario_id: string | null
+}
+
+export interface ItemEnriquecido {
+  id: string
+  ordem_id: string
+  pelicula_id: string | null
+  mescla_id: string | null
+  quantidade: number
+  peliculas?: { nome: string }
+  mesclas?: { nome: string }
+}
+
+export interface OPEmProducao {
+  id: string
+  numero: string
+  emitida_at: string
+  itens: ItemEnriquecido[]
+  statusSetor: StatusSetorRow[]
+}
 
 export interface OrdemProducao {
   id: string
