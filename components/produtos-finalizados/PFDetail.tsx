@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { ProducaoForm } from './ProducaoForm'
 import { ExpedicaoForm } from './ExpedicaoForm'
 import type { ProdutoFinalizadoComSaldo, MovimentacaoPF } from '@/types'
 
@@ -15,7 +14,7 @@ interface Props {
 }
 
 export function PFDetail({ produto, movimentacoes }: Props) {
-  const [dialog, setDialog] = useState<'producao' | 'expedicao' | null>(null)
+  const [dialog, setDialog] = useState<'expedicao' | null>(null)
 
   return (
     <div className="space-y-6">
@@ -49,9 +48,6 @@ export function PFDetail({ produto, movimentacoes }: Props) {
               </div>
             </div>
             <div className="flex flex-col gap-2">
-              <Button onClick={() => setDialog('producao')} className="bg-blue-600 hover:bg-blue-700">
-                + Produção
-              </Button>
               <Button onClick={() => setDialog('expedicao')} variant="outline">
                 ↑ Expedição
               </Button>
@@ -106,17 +102,8 @@ export function PFDetail({ produto, movimentacoes }: Props) {
       <Dialog open={dialog !== null} onOpenChange={() => setDialog(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {dialog === 'producao'
-                ? `Registrar Produção — ${produto.nome}`
-                : dialog === 'expedicao'
-                ? `Registrar Expedição — ${produto.nome}`
-                : ''}
-            </DialogTitle>
+            <DialogTitle>Registrar Expedição — {produto.nome}</DialogTitle>
           </DialogHeader>
-          {dialog === 'producao' && (
-            <ProducaoForm produtoId={produto.id} onClose={() => setDialog(null)} />
-          )}
           {dialog === 'expedicao' && (
             <ExpedicaoForm
               produtoId={produto.id}
