@@ -18,25 +18,25 @@ export default async function DashboardPage() {
   ])
 
   const [
-    { data: movsMp },
-    { data: movsPf },
-    { data: movsPelicula },
+    { data: movsMpRaw },
+    { data: movsPfRaw },
+    { data: movsPeliculaRaw },
     { data: opsAll },
     { data: opsRecentes },
   ] = await Promise.all([
     supabase
       .from('movimentacoes_mp')
-      .select('*, profiles(nome), materias_primas(nome)')
+      .select('*')
       .order('created_at', { ascending: false })
       .limit(6),
     supabase
       .from('movimentacoes_pf')
-      .select('*, profiles(nome), produtos_finalizados(nome)')
+      .select('*')
       .order('created_at', { ascending: false })
       .limit(6),
     supabase
       .from('movimentacoes_pelicula')
-      .select('*, profiles(nome), peliculas(nome)')
+      .select('*')
       .order('created_at', { ascending: false })
       .limit(6),
     // All OPs (lightweight) for accurate status counts
@@ -49,22 +49,43 @@ export default async function DashboardPage() {
       .limit(6),
   ])
 
-  const recentMP = (movsMp ?? []).map((m: any) => ({
+  // Enrich MP movements with material names
+  const mpIds = [...new Set((movsMpRaw ?? []).map((m: any) => m.materia_prima_id).filter(Boolean))]
+  const { data: mpNomes } = mpIds.length
+    ? await supabase.from('materias_primas').select('id, nome').in('id', mpIds)
+    : { data: [] }
+  const mpNomesMap = new Map((mpNomes ?? []).map((r: any) => [r.id, r.nome]))
+
+  // Enrich PF movements with product names
+  const pfIds = [...new Set((movsPfRaw ?? []).map((m: any) => m.produto_id).filter(Boolean))]
+  const { data: pfNomes } = pfIds.length
+    ? await supabase.from('produtos_finalizados').select('id, nome').in('id', pfIds)
+    : { data: [] }
+  const pfNomesMap = new Map((pfNomes ?? []).map((r: any) => [r.id, r.nome]))
+
+  // Enrich película movements with película names
+  const pelIds = [...new Set((movsPeliculaRaw ?? []).map((m: any) => m.pelicula_id).filter(Boolean))]
+  const { data: pelNomes } = pelIds.length
+    ? await supabase.from('peliculas').select('id, nome').in('id', pelIds)
+    : { data: [] }
+  const pelNomesMap = new Map((pelNomes ?? []).map((r: any) => [r.id, r.nome]))
+
+  const recentMP = (movsMpRaw ?? []).map((m: any) => ({
     ...m,
     kind: 'mp' as const,
-    nome_material: m.materias_primas?.nome ?? '',
+    nome_material: mpNomesMap.get(m.materia_prima_id) ?? '',
   }))
 
-  const recentPF = (movsPf ?? []).map((m: any) => ({
+  const recentPF = (movsPfRaw ?? []).map((m: any) => ({
     ...m,
     kind: 'pf' as const,
-    nome_produto: m.produtos_finalizados?.nome ?? '',
+    nome_produto: pfNomesMap.get(m.produto_id) ?? '',
   }))
 
-  const recentPelicula = (movsPelicula ?? []).map((m: any) => ({
+  const recentPelicula = (movsPeliculaRaw ?? []).map((m: any) => ({
     ...m,
     kind: 'pelicula' as const,
-    nome_material: m.peliculas?.nome ?? '',
+    nome_material: pelNomesMap.get(m.pelicula_id) ?? '',
   }))
 
   const allRecent = [...recentMP, ...recentPF, ...recentPelicula]
