@@ -53,13 +53,13 @@ export interface MovimentacaoPF {
   usuario_id: string
   observacao: string | null
   created_at: string
-  ordem_producao_id?: string | null
-  metros_cortados?: number | null
+  ordem_producao_id?: string | null  // populated for Corte records; null for legacy records
+  metros_cortados?: number | null    // meters of bobbin fed into the cutter; null for legacy records
   profiles?: Pick<Profile, 'nome'>
 }
 
 export interface RegistroCorte extends MovimentacaoPF {
-  tipo: 'producao'
+  tipo: 'producao'  // narrows MovimentacaoPF.tipo to only the 'producao' variant
   produtos_finalizados?: Pick<ProdutoFinalizado, 'nome'>
   ordens_producao?: Pick<OrdemProducao, 'numero'>
 }
