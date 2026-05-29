@@ -77,7 +77,11 @@ function MovementPill({ kind, tipo }: { kind: Movement['kind']; tipo: string }) 
 }
 
 function movementLabel(m: Movement): string {
-  if (m.kind === 'mp') return `${m.nome_material} — ${(m as MPMovement).quantidade} kg`
+  if (m.kind === 'mp') {
+    const qty = (m as MPMovement).quantidade
+    // mescla entries have quantity 0 — show name only
+    return qty > 0 ? `${m.nome_material} — ${qty} kg` : m.nome_material
+  }
   if (m.kind === 'pelicula')
     return `🎞️ ${m.nome_material} — ${(m as PeliculaMovement).quantidade_metros.toFixed(1)} m`
   const pf = m as PFMovement

@@ -18,17 +18,12 @@ export default async function DashboardPage() {
   ])
 
   const [
-    { data: movsMpRaw },
     { data: movsPfRaw },
     { data: movsPeliculaRaw },
     { data: opsAll },
     { data: opsRecentes },
+    { data: opsEmitidas },
   ] = await Promise.all([
-    supabase
-      .from('movimentacoes_mp')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(6),
     supabase
       .from('movimentacoes_pf')
       .select('*')
@@ -47,40 +42,51 @@ export default async function DashboardPage() {
       .select('id, numero, status, created_at, emitida_at, observacao')
       .order('created_at', { ascending: false })
       .limit(6),
+    // Recently emitted OPs for mescla consumption entries
+    supabase
+      .from('ordens_producao')
+      .select('id, emitida_at')
+      .eq('status', 'emitida')
+      .not('emitida_at', 'is', null)
+      .order('emitida_at', { ascending: false })
+      .limit(6),
   ])
 
-  // Enrich MP movements with material names
-  const mpIds = [...new Set((movsMpRaw ?? []).map((m: any) => m.materia_prima_id).filter(Boolean))]
-  const { data: mpNomes } = mpIds.length
-    ? await supabase.from('materias_primas').select('id, nome').in('id', mpIds)
-    : { data: [] }
-  const mpNomesMap = new Map((mpNomes ?? []).map((r: any) => [r.id, r.nome]))
+  // --- Mescla consumptions from emitted OP items ---
+  const emitidaIds = (opsEmitidas ?? []).map((op: any) => op.id)
+  const emitidaAtMap = new Map((opsEmitidas ?? []).map((op: any) => [op.id, op.emitida_at]))
 
-  // Enrich PF movements with product names
-  const pfIds = [...new Set((movsPfRaw ?? []).map((m: any) => m.produto_id).filter(Boolean))]
-  const { data: pfNomes } = pfIds.length
-    ? await supabase.from('produtos_finalizados').select('id, nome').in('id', pfIds)
+  const { data: mesclaItens } = emitidaIds.length
+    ? await supabase
+        .from('ordens_producao_itens')
+        .select('id, ordem_id, mescla_id')
+        .in('ordem_id', emitidaIds)
+        .not('mescla_id', 'is', null)
     : { data: [] }
-  const pfNomesMap = new Map((pfNomes ?? []).map((r: any) => [r.id, r.nome]))
 
-  // Enrich película movements with película names
+  const mesclaIds = [...new Set((mesclaItens ?? []).map((i: any) => i.mescla_id).filter(Boolean))]
+  const { data: mesclaNames } = mesclaIds.length
+    ? await supabase.from('mesclas').select('id, nome').in('id', mesclaIds)
+    : { data: [] }
+  const mesclaMap = new Map((mesclaNames ?? []).map((m: any) => [m.id, m.nome]))
+
+  // One entry per (op, mescla) — already deduplicated by item
+  const recentMescla = (mesclaItens ?? []).map((item: any) => ({
+    id: item.id,
+    kind: 'mp' as const,
+    tipo: 'saida' as const,
+    nome_material: mesclaMap.get(item.mescla_id) ?? 'Mescla',
+    quantidade: 0,
+    data: emitidaAtMap.get(item.ordem_id) ?? '',
+    created_at: emitidaAtMap.get(item.ordem_id) ?? '',
+  }))
+
+  // --- Película movements ---
   const pelIds = [...new Set((movsPeliculaRaw ?? []).map((m: any) => m.pelicula_id).filter(Boolean))]
   const { data: pelNomes } = pelIds.length
     ? await supabase.from('peliculas').select('id, nome').in('id', pelIds)
     : { data: [] }
   const pelNomesMap = new Map((pelNomes ?? []).map((r: any) => [r.id, r.nome]))
-
-  const recentMP = (movsMpRaw ?? []).map((m: any) => ({
-    ...m,
-    kind: 'mp' as const,
-    nome_material: mpNomesMap.get(m.materia_prima_id) ?? '',
-  }))
-
-  const recentPF = (movsPfRaw ?? []).map((m: any) => ({
-    ...m,
-    kind: 'pf' as const,
-    nome_produto: pfNomesMap.get(m.produto_id) ?? '',
-  }))
 
   const recentPelicula = (movsPeliculaRaw ?? []).map((m: any) => ({
     ...m,
@@ -88,15 +94,29 @@ export default async function DashboardPage() {
     nome_material: pelNomesMap.get(m.pelicula_id) ?? '',
   }))
 
-  const allRecent = [...recentMP, ...recentPF, ...recentPelicula]
+  // --- PF movements ---
+  const pfIds = [...new Set((movsPfRaw ?? []).map((m: any) => m.produto_id).filter(Boolean))]
+  const { data: pfNomes } = pfIds.length
+    ? await supabase.from('produtos_finalizados').select('id, nome').in('id', pfIds)
+    : { data: [] }
+  const pfNomesMap = new Map((pfNomes ?? []).map((r: any) => [r.id, r.nome]))
+
+  const recentPF = (movsPfRaw ?? []).map((m: any) => ({
+    ...m,
+    kind: 'pf' as const,
+    nome_produto: pfNomesMap.get(m.produto_id) ?? '',
+  }))
+
+  const allRecent = [...recentMescla, ...recentPelicula, ...recentPF]
+    .filter(m => m.data)
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 6)
+    .slice(0, 8)
 
   const alertasMP = materias.filter(m => m.em_alerta).length
   const alertasPelicula = peliculas.filter(p => p.em_alerta).length
   const totalCaixas = produtos.reduce((sum, p) => sum + p.saldo.total_caixas, 0)
   const opsRascunho = (opsAll ?? []).filter((op: any) => op.status === 'rascunho').length
-  const opsEmitidas = (opsAll ?? []).filter((op: any) => op.status === 'emitida').length
+  const opsEmitidasCount = (opsAll ?? []).filter((op: any) => op.status === 'emitida').length
 
   const today = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long',
@@ -120,7 +140,7 @@ export default async function DashboardPage() {
         totalPF={produtos.length}
         totalCaixas={totalCaixas}
         opsRascunho={opsRascunho}
-        opsEmitidas={opsEmitidas}
+        opsEmitidas={opsEmitidasCount}
       />
 
       <StockAlerts materias={materias} peliculas={peliculas} />
