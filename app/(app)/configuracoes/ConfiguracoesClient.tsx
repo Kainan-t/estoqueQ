@@ -8,20 +8,27 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import type { MateriaPrima, ConfiguracaoQualidade, Profile } from '@/types'
+import { MPCrud } from '@/components/configuracoes/MPCrud'
+import { PeliculaCrud } from '@/components/configuracoes/PeliculaCrud'
+import { MesclaCrud } from '@/components/configuracoes/MesclaCrud'
+import type { MateriaPrima, ConfiguracaoQualidade, Profile, Pelicula, Mescla } from '@/types'
 
 interface Props {
-  materias: Pick<MateriaPrima, 'id' | 'nome' | 'estoque_minimo'>[]
+  materias: Pick<MateriaPrima, 'id' | 'nome' | 'unidade' | 'estoque_minimo'>[]
+  peliculas: Pick<Pelicula, 'id' | 'nome' | 'largura' | 'tonalidade' | 'espessura' | 'protecao_uva' | 'protecao_uvb' | 'estoque_minimo'>[]
+  mesclas: (Pick<Mescla, 'id' | 'nome'> & {
+    mescla_ingredientes?: { id: string; materia_prima_id: string; quantidade_por_mescla: number; materias_primas?: { nome: string } }[]
+  })[]
   qualidade: ConfiguracaoQualidade[]
   usuarios: Pick<Profile, 'id' | 'nome' | 'cargo'>[]
 }
 
-export function ConfiguracoesClient({ materias, qualidade, usuarios }: Props) {
+export function ConfiguracoesClient({ materias, peliculas, mesclas, qualidade, usuarios }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [saveError, setSaveError] = useState('')
 
-  // Estoque mínimo
+  // Estoque mínimo quick-edit (existing feature)
   const [minimoValues, setMinimoValues] = useState<Record<string, string>>(
     Object.fromEntries(materias.map(m => [m.id, String(m.estoque_minimo)]))
   )
@@ -60,7 +67,7 @@ export function ConfiguracoesClient({ materias, qualidade, usuarios }: Props) {
     }
   }
 
-  // Cargo de usuário
+  // Cargo
   const [savingCargo, setSavingCargo] = useState<string | null>(null)
 
   async function alterarCargo(id: string, cargo: 'admin' | 'operador') {
@@ -83,7 +90,7 @@ export function ConfiguracoesClient({ materias, qualidade, usuarios }: Props) {
         <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded px-3 py-2">{saveError}</p>
       )}
 
-      {/* Estoque mínimo */}
+      {/* Estoque mínimo quick-edit */}
       <Card>
         <CardHeader><CardTitle className="text-base">Estoque mínimo — Matérias-Primas</CardTitle></CardHeader>
         <CardContent>
@@ -94,9 +101,8 @@ export function ConfiguracoesClient({ materias, qualidade, usuarios }: Props) {
                 <Input type="number" min="0" step="0.1" className="w-28"
                   value={minimoValues[mp.id]}
                   onChange={e => setMinimoValues(p => ({ ...p, [mp.id]: e.target.value }))} />
-                <span className="text-xs text-muted-foreground">kg</span>
-                <Button size="sm" onClick={() => salvarMinimo(mp.id)}
-                  disabled={savingMinimo === mp.id}>
+                <span className="text-xs text-muted-foreground">{mp.unidade}</span>
+                <Button size="sm" onClick={() => salvarMinimo(mp.id)} disabled={savingMinimo === mp.id}>
                   {savingMinimo === mp.id ? '...' : 'Salvar'}
                 </Button>
               </div>
@@ -160,6 +166,11 @@ export function ConfiguracoesClient({ materias, qualidade, usuarios }: Props) {
           </p>
         </CardContent>
       </Card>
+
+      {/* CRUD Cadastros */}
+      <MPCrud materias={materias} />
+      <PeliculaCrud peliculas={peliculas} />
+      <MesclaCrud mesclas={mesclas} materias={materias} />
     </div>
   )
 }
