@@ -9,6 +9,7 @@ const navItems = [
   { href: '/materias-primas', label: 'Matéria-Prima', icon: '🧪' },
   { href: '/peliculas', label: 'Películas', icon: '🎞️' },
   { href: '/ordens-producao', label: 'Ordens de Produção', icon: '📋' },
+  { href: '/em-producao', label: 'Em Produção', icon: '🏭' },
   { href: '/corte', label: 'Corte', icon: '✂️' },
   { href: '/produtos-finalizados', label: 'Prod. Finalizado', icon: '📦' },
   { href: '/relatorios', label: 'Relatórios', icon: '📈' },
