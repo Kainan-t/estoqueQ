@@ -47,7 +47,7 @@ export async function getOPsEmProducao(): Promise<OPEmProducao[]> {
   return ops.map(op => ({
     id: op.id,
     numero: op.numero,
-    emitida_at: op.emitida_at ?? op.id,
+    emitida_at: op.emitida_at ?? '',
     itens: itens
       .filter((i: any) => i.ordem_id === op.id)
       .map((i: any): ItemEnriquecido => ({
