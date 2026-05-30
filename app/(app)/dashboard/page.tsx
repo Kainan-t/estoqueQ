@@ -153,12 +153,15 @@ export default async function DashboardPage() {
   )
   const emProdNomeMap = new Map((opsEmitidaNomes ?? []).map((op: any) => [op.id as string, op.numero as string]))
 
-  const emProducaoStatuses = (statusSetorRaw ?? []).map((s: any) => ({
-    op_id: s.op_id as string,
-    op_numero: emProdNomeMap.get(s.op_id) ?? '',
-    setor: s.setor as 'quimico' | 'maquina' | 'corte',
-    item_label: emProdItemLabelMap.get(s.item_id) ?? '',
-  }))
+  const VALID_SETORES = ['quimico', 'maquina', 'corte'] as const
+  const emProducaoStatuses = (statusSetorRaw ?? [])
+    .filter((s: any) => VALID_SETORES.includes(s.setor))
+    .map((s: any) => ({
+      op_id: s.op_id as string,
+      op_numero: emProdNomeMap.get(s.op_id) ?? '',
+      setor: s.setor as 'quimico' | 'maquina' | 'corte',
+      item_label: emProdItemLabelMap.get(s.item_id) ?? '',
+    }))
 
   const alertasMP = materias.filter(m => m.em_alerta).length
   const alertasPelicula = peliculas.filter(p => p.em_alerta).length

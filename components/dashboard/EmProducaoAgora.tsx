@@ -56,7 +56,7 @@ export function EmProducaoAgora({ statuses }: Props) {
                         <span className="w-16 text-muted-foreground shrink-0">
                           {meta.icon} {meta.label}
                         </span>
-                        {s ? (
+                        {s?.item_label ? (
                           <span className="text-slate-800">{s.item_label}</span>
                         ) : (
                           <span className="text-muted-foreground italic">Aguardando</span>
