@@ -7,6 +7,7 @@ import { StockAlerts } from '@/components/dashboard/StockAlerts'
 import { RecentMovements } from '@/components/dashboard/RecentMovements'
 import { RecentOPs } from '@/components/dashboard/RecentOPs'
 import { StockOverview } from '@/components/dashboard/StockOverview'
+import { EmProducaoAgora } from '@/components/dashboard/EmProducaoAgora'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -23,6 +24,7 @@ export default async function DashboardPage() {
     { data: opsAll },
     { data: opsRecentes },
     { data: opsEmitidas },
+    { data: opsEmitidaNomes },
   ] = await Promise.all([
     supabase
       .from('movimentacoes_pf')
@@ -50,6 +52,11 @@ export default async function DashboardPage() {
       .not('emitida_at', 'is', null)
       .order('emitida_at', { ascending: false })
       .limit(6),
+    // OPs emitidas com número (para card Em Produção)
+    supabase
+      .from('ordens_producao')
+      .select('id, numero')
+      .eq('status', 'emitida'),
   ])
 
   // --- Mescla consumptions from emitted OP items ---
@@ -112,6 +119,47 @@ export default async function DashboardPage() {
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 8)
 
+  // --- Em Produção status ---
+  const emProducaoOpIds = (opsEmitidaNomes ?? []).map((op: any) => op.id)
+  const { data: statusSetorRaw } = emProducaoOpIds.length
+    ? await supabase.from('status_setor').select('*').in('op_id', emProducaoOpIds)
+    : { data: [] }
+
+  const emProdItemIds = [...new Set((statusSetorRaw ?? []).map((s: any) => s.item_id).filter(Boolean))]
+  const { data: emProdItens } = emProdItemIds.length
+    ? await supabase
+        .from('ordens_producao_itens')
+        .select('id, pelicula_id, mescla_id, quantidade')
+        .in('id', emProdItemIds)
+    : { data: [] }
+
+  const emProdPelIds = [...new Set((emProdItens ?? []).map((i: any) => i.pelicula_id).filter(Boolean))]
+  const { data: emProdPelNomes } = emProdPelIds.length
+    ? await supabase.from('peliculas').select('id, nome').in('id', emProdPelIds)
+    : { data: [] }
+  const emProdPelMap = new Map((emProdPelNomes ?? []).map((p: any) => [p.id, p.nome as string]))
+
+  const emProdMesclaIds = [...new Set((emProdItens ?? []).map((i: any) => i.mescla_id).filter(Boolean))]
+  const { data: emProdMesclaRaw } = emProdMesclaIds.length
+    ? await supabase.from('mesclas').select('id, nome').in('id', emProdMesclaIds)
+    : { data: [] }
+  const emProdMesclaMap = new Map((emProdMesclaRaw ?? []).map((m: any) => [m.id, m.nome as string]))
+
+  const emProdItemLabelMap = new Map(
+    (emProdItens ?? []).map((i: any) => [
+      i.id as string,
+      (i.pelicula_id ? emProdPelMap.get(i.pelicula_id) : emProdMesclaMap.get(i.mescla_id)) ?? '',
+    ])
+  )
+  const emProdNomeMap = new Map((opsEmitidaNomes ?? []).map((op: any) => [op.id as string, op.numero as string]))
+
+  const emProducaoStatuses = (statusSetorRaw ?? []).map((s: any) => ({
+    op_id: s.op_id as string,
+    op_numero: emProdNomeMap.get(s.op_id) ?? '',
+    setor: s.setor as 'quimico' | 'maquina' | 'corte',
+    item_label: emProdItemLabelMap.get(s.item_id) ?? '',
+  }))
+
   const alertasMP = materias.filter(m => m.em_alerta).length
   const alertasPelicula = peliculas.filter(p => p.em_alerta).length
   const totalCaixas = produtos.reduce((sum, p) => sum + p.saldo.total_caixas, 0)
@@ -144,6 +192,8 @@ export default async function DashboardPage() {
       />
 
       <StockAlerts materias={materias} peliculas={peliculas} />
+
+      <EmProducaoAgora statuses={emProducaoStatuses} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <RecentOPs ops={(opsRecentes ?? []) as any} />
