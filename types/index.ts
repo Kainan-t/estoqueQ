@@ -1,4 +1,5 @@
 export type Cargo = 'admin' | 'operador'
+export type Setor = 'quimico' | 'maquina' | 'corte'
 export type TipoMP = 'entrada' | 'saida'
 export type TipoPF = 'producao' | 'expedicao'
 
@@ -6,6 +7,7 @@ export interface Profile {
   id: string
   nome: string
   cargo: Cargo
+  setor: Setor | null
   created_at: string
 }
 
@@ -125,10 +127,11 @@ export type StatusOP = 'rascunho' | 'emitida' | 'concluida' | 'cancelada'
 export interface StatusSetorRow {
   id: string
   op_id: string
-  setor: 'quimico' | 'maquina' | 'corte'
+  setor: Setor
   item_id: string
   updated_at: string
   usuario_id: string | null
+  usuario_nome: string | null
 }
 
 export interface ItemEnriquecido {
