@@ -43,6 +43,15 @@ export async function getOPsEmProducao(): Promise<OPEmProducao[]> {
     .select('*')
     .in('op_id', opIds)
 
+  // 6. Nomes dos autores dos status_setor
+  const usuarioIds = [...new Set(
+    (statusRaw ?? []).map((s: any) => s.usuario_id).filter(Boolean)
+  )] as string[]
+  const { data: perfisRaw } = usuarioIds.length
+    ? await supabase.from('profiles').select('id, nome').in('id', usuarioIds)
+    : { data: [] }
+  const perfisMap = new Map((perfisRaw ?? []).map((p: any) => [p.id, p.nome as string]))
+
   // Montar resultado
   return ops.map(op => ({
     id: op.id,
@@ -59,6 +68,16 @@ export async function getOPsEmProducao(): Promise<OPEmProducao[]> {
         peliculas: i.pelicula_id ? { nome: pelMap.get(i.pelicula_id) ?? '' } : undefined,
         mesclas: i.mescla_id ? { nome: mesclaMap.get(i.mescla_id) ?? '' } : undefined,
       })),
-    statusSetor: (statusRaw ?? []).filter((s: any) => s.op_id === op.id) as StatusSetorRow[],
+    statusSetor: (statusRaw ?? [])
+      .filter((s: any) => s.op_id === op.id)
+      .map((s: any): StatusSetorRow => ({
+        id: s.id,
+        op_id: s.op_id,
+        setor: s.setor,
+        item_id: s.item_id,
+        updated_at: s.updated_at,
+        usuario_id: s.usuario_id ?? null,
+        usuario_nome: s.usuario_id ? (perfisMap.get(s.usuario_id) ?? null) : null,
+      })),
   }))
 }
