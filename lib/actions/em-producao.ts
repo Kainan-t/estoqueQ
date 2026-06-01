@@ -12,13 +12,15 @@ export async function upsertStatusSetor(data: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Não autenticado')
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('cargo, setor')
     .eq('id', user.id)
     .single()
 
-  if (profile?.cargo !== 'admin' && profile?.setor !== data.setor) {
+  if (profileError || !profile) throw new Error('Perfil de usuário não encontrado')
+
+  if (profile.cargo !== 'admin' && profile.setor !== data.setor) {
     throw new Error('Sem permissão para editar este setor')
   }
 
@@ -42,13 +44,15 @@ export async function concluirOP(op_id: string): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Não autenticado')
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('cargo')
     .eq('id', user.id)
     .single()
 
-  if (profile?.cargo !== 'admin') {
+  if (profileError || !profile) throw new Error('Perfil de usuário não encontrado')
+
+  if (profile.cargo !== 'admin') {
     throw new Error('Apenas administradores podem concluir OPs')
   }
 
