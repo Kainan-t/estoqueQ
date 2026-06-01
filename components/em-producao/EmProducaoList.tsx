@@ -1,11 +1,13 @@
-import type { OPEmProducao } from '@/types'
+import type { OPEmProducao, Cargo, Setor } from '@/types'
 import { OPStatusCard } from './OPStatusCard'
 
 interface Props {
   ops: OPEmProducao[]
+  meuCargo: Cargo
+  meuSetor: Setor | null
 }
 
-export function EmProducaoList({ ops }: Props) {
+export function EmProducaoList({ ops, meuCargo, meuSetor }: Props) {
   if (ops.length === 0) {
     return (
       <p className="text-sm text-muted-foreground py-10 text-center">
@@ -21,6 +23,8 @@ export function EmProducaoList({ ops }: Props) {
           op={{ id: op.id, numero: op.numero, emitida_at: op.emitida_at }}
           itens={op.itens}
           statusSetor={op.statusSetor}
+          meuCargo={meuCargo}
+          meuSetor={meuSetor}
         />
       ))}
     </div>
