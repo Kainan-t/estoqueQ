@@ -11,10 +11,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { upsertStatusSetor } from '@/lib/actions/em-producao'
+import type { Setor } from '@/types'
 
 interface Props {
   opId: string
-  setor: 'quimico' | 'maquina' | 'corte'
+  setor: Setor
   opcoes: { id: string; label: string }[]
   itemAtualId?: string
   onCancelar: () => void

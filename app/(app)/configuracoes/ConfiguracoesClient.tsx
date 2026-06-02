@@ -8,10 +8,17 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { MPCrud } from '@/components/configuracoes/MPCrud'
 import { PeliculaCrud } from '@/components/configuracoes/PeliculaCrud'
 import { MesclaCrud } from '@/components/configuracoes/MesclaCrud'
-import type { MateriaPrima, ConfiguracaoQualidade, Profile, Pelicula, Mescla } from '@/types'
+import type { MateriaPrima, ConfiguracaoQualidade, Profile, Pelicula, Mescla, Setor } from '@/types'
 
 interface Props {
   materias: Pick<MateriaPrima, 'id' | 'nome' | 'unidade' | 'estoque_minimo'>[]
@@ -20,7 +27,7 @@ interface Props {
     mescla_ingredientes?: { id: string; materia_prima_id: string; quantidade_por_mescla: number; materias_primas?: { nome: string } }[]
   })[]
   qualidade: ConfiguracaoQualidade[]
-  usuarios: Pick<Profile, 'id' | 'nome' | 'cargo'>[]
+  usuarios: Pick<Profile, 'id' | 'nome' | 'cargo' | 'setor'>[]
 }
 
 export function ConfiguracoesClient({ materias, peliculas, mesclas, qualidade, usuarios }: Props) {
@@ -69,6 +76,7 @@ export function ConfiguracoesClient({ materias, peliculas, mesclas, qualidade, u
 
   // Cargo
   const [savingCargo, setSavingCargo] = useState<string | null>(null)
+  const [savingSetor, setSavingSetor] = useState<string | null>(null)
 
   async function alterarCargo(id: string, cargo: 'admin' | 'operador') {
     setSavingCargo(id)
@@ -79,6 +87,21 @@ export function ConfiguracoesClient({ materias, peliculas, mesclas, qualidade, u
       router.refresh()
     } finally {
       setSavingCargo(null)
+    }
+  }
+
+  async function alterarSetor(id: string, setor: Setor | null) {
+    setSavingSetor(id)
+    setSaveError('')
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ setor: setor || null })
+        .eq('id', id)
+      if (error) { setSaveError('Erro ao alterar setor.'); return }
+      router.refresh()
+    } finally {
+      setSavingSetor(null)
     }
   }
 
@@ -144,7 +167,24 @@ export function ConfiguracoesClient({ materias, peliculas, mesclas, qualidade, u
                     {u.cargo === 'admin' ? 'Admin' : 'Operador'}
                   </Badge>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2 flex-wrap justify-end">
+                  {u.cargo === 'operador' && (
+                    <Select
+                      value={u.setor ?? ''}
+                      onValueChange={(val) => alterarSetor(u.id, (val || null) as Setor | null)}
+                      disabled={savingSetor === u.id}
+                    >
+                      <SelectTrigger className="w-36 h-7 text-xs">
+                        <SelectValue placeholder="— sem setor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">— sem setor</SelectItem>
+                        <SelectItem value="quimico">🧪 Químico</SelectItem>
+                        <SelectItem value="maquina">⚙️ Máquina</SelectItem>
+                        <SelectItem value="corte">✂️ Corte</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
                   {u.cargo !== 'admin' && (
                     <Button size="sm" variant="outline" onClick={() => alterarCargo(u.id, 'admin')}
                       disabled={savingCargo === u.id}>

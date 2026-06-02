@@ -30,7 +30,7 @@ export default async function ConfiguracoesPage() {
     supabase.from('peliculas').select('id, nome, largura, tonalidade, espessura, protecao_uva, protecao_uvb, estoque_minimo').order('nome'),
     supabase.from('mesclas').select('id, nome, mescla_ingredientes(id, materia_prima_id, quantidade_por_mescla, materias_primas(nome))').order('nome') as any,
     supabase.from('configuracoes_qualidade').select('*'),
-    supabase.from('profiles').select('id, nome, cargo').order('nome'),
+    supabase.from('profiles').select('id, nome, cargo, setor').order('nome'),
   ])
 
   return (
