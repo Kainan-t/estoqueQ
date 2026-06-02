@@ -7,12 +7,14 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { SetorEditor } from './SetorEditor'
 import { concluirOP } from '@/lib/actions/em-producao'
-import type { ItemEnriquecido, StatusSetorRow } from '@/types'
+import type { ItemEnriquecido, StatusSetorRow, Cargo, Setor } from '@/types'
 
 interface Props {
   op: { id: string; numero: string; emitida_at: string }
   itens: ItemEnriquecido[]
   statusSetor: StatusSetorRow[]
+  meuCargo: Cargo
+  meuSetor: Setor | null
 }
 
 const SETORES = [
@@ -22,7 +24,7 @@ const SETORES = [
 ]
 
 function getOpcoes(
-  setor: 'quimico' | 'maquina' | 'corte',
+  setor: Setor,
   itens: ItemEnriquecido[]
 ): { id: string; label: string }[] {
   if (setor === 'quimico') {
@@ -41,11 +43,23 @@ function getOpcoes(
     }))
 }
 
-export function OPStatusCard({ op, itens, statusSetor }: Props) {
+function formatDateTime(iso: string): string {
+  const d = new Date(iso)
+  const date = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+  const time = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  return `${date} ${time}`
+}
+
+export function OPStatusCard({ op, itens, statusSetor, meuCargo, meuSetor }: Props) {
   const router = useRouter()
-  const [editando, setEditando] = useState<'quimico' | 'maquina' | 'corte' | null>(null)
+  const [editando, setEditando] = useState<Setor | null>(null)
   const [concluindo, setConcluindo] = useState(false)
   const [erroConclui, setErroConclui] = useState('')
+
+  const canEditSetor = (key: Setor) =>
+    meuCargo === 'admin' || meuSetor === key
+
+  const canConcluir = meuCargo === 'admin'
 
   async function handleConcluir() {
     setConcluindo(true)
@@ -85,66 +99,78 @@ export function OPStatusCard({ op, itens, statusSetor }: Props) {
           const status = statusSetor.find(s => s.setor === key)
           const opcoes = getOpcoes(key, itens)
           const itemAtual = status ? opcoes.find(o => o.id === status.item_id) : undefined
+          const podeEditar = canEditSetor(key)
 
           return (
-            <div key={key} className="flex items-center gap-2 text-sm min-h-[28px]">
-              <span className="w-20 text-muted-foreground font-medium shrink-0 text-xs">
-                {icon} {label}
-              </span>
-              {editando === key ? (
-                <SetorEditor
-                  opId={op.id}
-                  setor={key}
-                  opcoes={opcoes}
-                  itemAtualId={status?.item_id}
-                  onCancelar={() => setEditando(null)}
-                />
-              ) : status && itemAtual ? (
-                <>
-                  <span className="flex-1 text-slate-800 text-xs">{itemAtual.label} ✓</span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 text-xs px-2 shrink-0"
-                    onClick={() => setEditando(key)}
-                  >
-                    ✏️ Editar
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <span className="flex-1 text-muted-foreground text-xs italic">
-                    {opcoes.length === 0 ? 'Sem itens neste setor' : 'Não iniciado'}
-                  </span>
-                  {opcoes.length > 0 && (
-                    <Button
-                      size="sm"
-                      className="h-6 text-xs px-2 shrink-0"
-                      onClick={() => setEditando(key)}
-                    >
-                      ▶ Iniciar
-                    </Button>
-                  )}
-                </>
+            <div key={key} className="text-sm min-h-[28px]">
+              <div className="flex items-center gap-2">
+                <span className="w-20 text-muted-foreground font-medium shrink-0 text-xs">
+                  {icon} {label}
+                </span>
+                {editando === key ? (
+                  <SetorEditor
+                    opId={op.id}
+                    setor={key}
+                    opcoes={opcoes}
+                    itemAtualId={status?.item_id}
+                    onCancelar={() => setEditando(null)}
+                  />
+                ) : status && itemAtual ? (
+                  <>
+                    <span className="flex-1 text-slate-800 text-xs">{itemAtual.label} ✓</span>
+                    {podeEditar && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 text-xs px-2 shrink-0"
+                        onClick={() => setEditando(key)}
+                      >
+                        ✏️ Editar
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <span className="flex-1 text-muted-foreground text-xs italic">
+                      {opcoes.length === 0 ? 'Sem itens neste setor' : 'Não iniciado'}
+                    </span>
+                    {opcoes.length > 0 && podeEditar && (
+                      <Button
+                        size="sm"
+                        className="h-6 text-xs px-2 shrink-0"
+                        onClick={() => setEditando(key)}
+                      >
+                        ▶ Iniciar
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
+              {status && itemAtual && status.usuario_nome && (
+                <p className="text-[10px] text-muted-foreground ml-[88px] mt-0.5">
+                  por {status.usuario_nome} • {formatDateTime(status.updated_at)}
+                </p>
               )}
             </div>
           )
         })}
 
-        <div className="pt-1 flex flex-col items-end gap-1">
-          {erroConclui && (
-            <p className="text-xs text-red-600 self-start">{erroConclui}</p>
-          )}
-          <Button
-            size="sm"
-            variant="outline"
-            className="text-xs text-green-700 border-green-300 hover:bg-green-50"
-            onClick={handleConcluir}
-            disabled={concluindo}
-          >
-            {concluindo ? 'Concluindo...' : '✅ Marcar como Concluída'}
-          </Button>
-        </div>
+        {canConcluir && (
+          <div className="pt-1 flex flex-col items-end gap-1">
+            {erroConclui && (
+              <p className="text-xs text-red-600 self-start">{erroConclui}</p>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs text-green-700 border-green-300 hover:bg-green-50"
+              onClick={handleConcluir}
+              disabled={concluindo}
+            >
+              {concluindo ? 'Concluindo...' : '✅ Marcar como Concluída'}
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   )
