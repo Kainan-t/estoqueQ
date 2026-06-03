@@ -95,6 +95,7 @@ export type TipoPelicula = 'entrada' | 'saida'
 export interface Pelicula {
   id: string
   nome: string
+  codigo: string | null
   largura: string
   tonalidade: string
   espessura: string
@@ -140,8 +141,20 @@ export interface ItemEnriquecido {
   pelicula_id: string | null
   mescla_id: string | null
   quantidade: number
-  peliculas?: { nome: string }
+  peliculas?: { nome: string; codigo: string | null }
   mesclas?: { nome: string }
+}
+
+export interface LoteProducao {
+  id: string
+  op_id: string
+  item_id: string
+  pelicula_id: string
+  numero: string
+  metragem: number
+  usuario_id: string | null
+  usuario_nome: string | null
+  created_at: string
 }
 
 export interface OPEmProducao {
@@ -150,6 +163,7 @@ export interface OPEmProducao {
   emitida_at: string
   itens: ItemEnriquecido[]
   statusSetor: StatusSetorRow[]
+  lotes: LoteProducao[]
 }
 
 export interface OrdemProducao {
