@@ -22,7 +22,7 @@ import type { MateriaPrima, ConfiguracaoQualidade, Profile, Pelicula, Mescla, Se
 
 interface Props {
   materias: Pick<MateriaPrima, 'id' | 'nome' | 'unidade' | 'estoque_minimo'>[]
-  peliculas: Pick<Pelicula, 'id' | 'nome' | 'largura' | 'tonalidade' | 'espessura' | 'protecao_uva' | 'protecao_uvb' | 'estoque_minimo'>[]
+  peliculas: Pick<Pelicula, 'id' | 'nome' | 'codigo' | 'largura' | 'tonalidade' | 'espessura' | 'protecao_uva' | 'protecao_uvb' | 'estoque_minimo'>[]
   mesclas: (Pick<Mescla, 'id' | 'nome'> & {
     mescla_ingredientes?: { id: string; materia_prima_id: string; quantidade_por_mescla: number; materias_primas?: { nome: string } }[]
   })[]

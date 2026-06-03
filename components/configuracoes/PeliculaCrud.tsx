@@ -9,12 +9,12 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { Pelicula } from '@/types'
 
-type PeliculaRow = Pick<Pelicula, 'id' | 'nome' | 'largura' | 'tonalidade' | 'espessura' | 'protecao_uva' | 'protecao_uvb' | 'estoque_minimo'>
-type EditPelicula = { nome: string; largura: string; tonalidade: string; espessura: string; protecao_uva: string; protecao_uvb: string; estoque_minimo: string }
+type PeliculaRow = Pick<Pelicula, 'id' | 'nome' | 'codigo' | 'largura' | 'tonalidade' | 'espessura' | 'protecao_uva' | 'protecao_uvb' | 'estoque_minimo'>
+type EditPelicula = { nome: string; codigo: string; largura: string; tonalidade: string; espessura: string; protecao_uva: string; protecao_uvb: string; estoque_minimo: string }
 
 interface Props { peliculas: PeliculaRow[] }
 
-const emptyEdit = (): EditPelicula => ({ nome: '', largura: '', tonalidade: '', espessura: '', protecao_uva: '', protecao_uvb: '', estoque_minimo: '0' })
+const emptyEdit = (): EditPelicula => ({ nome: '', codigo: '', largura: '', tonalidade: '', espessura: '', protecao_uva: '', protecao_uvb: '', estoque_minimo: '0' })
 
 export function PeliculaCrud({ peliculas }: Props) {
   const router = useRouter()
@@ -25,7 +25,7 @@ export function PeliculaCrud({ peliculas }: Props) {
   const [savingNew, setSavingNew] = useState(false)
   const [editValues, setEditValues] = useState<Record<string, EditPelicula>>(
     Object.fromEntries(peliculas.map(p => [p.id, {
-      nome: p.nome, largura: p.largura, tonalidade: p.tonalidade,
+      nome: p.nome, codigo: p.codigo ?? '', largura: p.largura, tonalidade: p.tonalidade,
       espessura: p.espessura, protecao_uva: p.protecao_uva,
       protecao_uvb: p.protecao_uvb, estoque_minimo: String(p.estoque_minimo),
     }]))
@@ -50,7 +50,8 @@ export function PeliculaCrud({ peliculas }: Props) {
     setSavingNew(true); setError('')
     try {
       const { error: e } = await supabase.from('peliculas').insert({
-        nome: newFields.nome.trim(), largura: newFields.largura.trim(),
+        nome: newFields.nome.trim(), codigo: newFields.codigo.trim() || null,
+        largura: newFields.largura.trim(),
         tonalidade: newFields.tonalidade.trim(), espessura: newFields.espessura.trim(),
         protecao_uva: newFields.protecao_uva.trim(), protecao_uvb: newFields.protecao_uvb.trim(),
         estoque_minimo: parseFloat(newFields.estoque_minimo),
@@ -68,7 +69,8 @@ export function PeliculaCrud({ peliculas }: Props) {
     setSavingId(id); setError('')
     try {
       const { error: e } = await supabase.from('peliculas').update({
-        nome: val.nome.trim(), largura: val.largura.trim(),
+        nome: val.nome.trim(), codigo: val.codigo.trim() || null,
+        largura: val.largura.trim(),
         tonalidade: val.tonalidade.trim(), espessura: val.espessura.trim(),
         protecao_uva: val.protecao_uva.trim(), protecao_uvb: val.protecao_uvb.trim(),
         estoque_minimo: parseFloat(val.estoque_minimo),
@@ -96,6 +98,8 @@ export function PeliculaCrud({ peliculas }: Props) {
       <div className="flex flex-wrap gap-2">
         <div className="space-y-1"><Label className="text-xs">Nome</Label>
           <Input className="w-40" value={f.nome} onChange={e => onChange({ nome: e.target.value })} placeholder="Ex: PS4 Clear" /></div>
+        <div className="space-y-1"><Label className="text-xs">Código (lote)</Label>
+          <Input className="w-28" value={f.codigo} onChange={e => onChange({ codigo: e.target.value })} placeholder="Ex: FUME" /></div>
         <div className="space-y-1"><Label className="text-xs">Largura</Label>
           <Input className="w-24" value={f.largura} onChange={e => onChange({ largura: e.target.value })} placeholder="1,52m" /></div>
         <div className="space-y-1"><Label className="text-xs">Tonalidade</Label>
@@ -137,7 +141,7 @@ export function PeliculaCrud({ peliculas }: Props) {
         )}
         {peliculas.map(p => (
           <FieldRow key={p.id}
-            f={editValues[p.id] ?? { nome: p.nome, largura: p.largura, tonalidade: p.tonalidade, espessura: p.espessura, protecao_uva: p.protecao_uva, protecao_uvb: p.protecao_uvb, estoque_minimo: String(p.estoque_minimo) }}
+            f={editValues[p.id] ?? { nome: p.nome, codigo: p.codigo ?? '', largura: p.largura, tonalidade: p.tonalidade, espessura: p.espessura, protecao_uva: p.protecao_uva, protecao_uvb: p.protecao_uvb, estoque_minimo: String(p.estoque_minimo) }}
             onChange={patch => setEdit(p.id, patch)}
             onSave={() => handleUpdate(p.id)}
             onDelete={() => handleDelete(p.id, p.nome)}
