@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import type { OPEmProducao, StatusSetorRow, ItemEnriquecido } from '@/types'
+import type { OPEmProducao, StatusSetorRow, ItemEnriquecido, LoteProducao } from '@/types'
 
 export async function getOPsEmProducao(): Promise<OPEmProducao[]> {
   const supabase = await createClient()
@@ -23,12 +23,14 @@ export async function getOPsEmProducao(): Promise<OPEmProducao[]> {
 
   const itens = itensRaw ?? []
 
-  // 3. Nomes das películas
+  // 3. Nomes e códigos das películas
   const pelIds = [...new Set(itens.map((i: any) => i.pelicula_id).filter(Boolean))]
   const { data: pelRaw } = pelIds.length
-    ? await supabase.from('peliculas').select('id, nome').in('id', pelIds)
+    ? await supabase.from('peliculas').select('id, nome, codigo').in('id', pelIds)
     : { data: [] }
-  const pelMap = new Map((pelRaw ?? []).map((p: any) => [p.id, p.nome as string]))
+  const pelMap = new Map(
+    (pelRaw ?? []).map((p: any) => [p.id, { nome: p.nome as string, codigo: (p.codigo ?? null) as string | null }])
+  )
 
   // 4. Nomes das mesclas
   const mesclaIds = [...new Set(itens.map((i: any) => i.mescla_id).filter(Boolean))]
@@ -43,10 +45,17 @@ export async function getOPsEmProducao(): Promise<OPEmProducao[]> {
     .select('*')
     .in('op_id', opIds)
 
-  // 6. Nomes dos autores dos status_setor
-  const usuarioIds = [...new Set(
-    (statusRaw ?? []).map((s: any) => s.usuario_id).filter(Boolean)
-  )] as string[]
+  // 6. Lotes de produção das OPs
+  const { data: lotesRaw } = await supabase
+    .from('lotes_producao')
+    .select('id, op_id, item_id, pelicula_id, numero, metragem, usuario_id, created_at')
+    .in('op_id', opIds)
+
+  // 7. Nomes dos autores (status_setor + lotes)
+  const usuarioIds = [...new Set([
+    ...(statusRaw ?? []).map((s: any) => s.usuario_id),
+    ...(lotesRaw ?? []).map((l: any) => l.usuario_id),
+  ].filter(Boolean))] as string[]
   const { data: perfisRaw } = usuarioIds.length
     ? await supabase.from('profiles').select('id, nome').in('id', usuarioIds)
     : { data: [] }
@@ -65,7 +74,12 @@ export async function getOPsEmProducao(): Promise<OPEmProducao[]> {
         pelicula_id: i.pelicula_id ?? null,
         mescla_id: i.mescla_id ?? null,
         quantidade: i.quantidade,
-        peliculas: i.pelicula_id ? { nome: pelMap.get(i.pelicula_id) ?? '' } : undefined,
+        peliculas: i.pelicula_id
+          ? {
+              nome: pelMap.get(i.pelicula_id)?.nome ?? '',
+              codigo: pelMap.get(i.pelicula_id)?.codigo ?? null,
+            }
+          : undefined,
         mesclas: i.mescla_id ? { nome: mesclaMap.get(i.mescla_id) ?? '' } : undefined,
       })),
     statusSetor: (statusRaw ?? [])
@@ -78,6 +92,19 @@ export async function getOPsEmProducao(): Promise<OPEmProducao[]> {
         updated_at: s.updated_at,
         usuario_id: s.usuario_id ?? null,
         usuario_nome: s.usuario_id ? (perfisMap.get(s.usuario_id) ?? null) : null,
+      })),
+    lotes: (lotesRaw ?? [])
+      .filter((l: any) => l.op_id === op.id)
+      .map((l: any): LoteProducao => ({
+        id: l.id,
+        op_id: l.op_id,
+        item_id: l.item_id,
+        pelicula_id: l.pelicula_id,
+        numero: l.numero,
+        metragem: Number(l.metragem),
+        usuario_id: l.usuario_id ?? null,
+        usuario_nome: l.usuario_id ? (perfisMap.get(l.usuario_id) ?? null) : null,
+        created_at: l.created_at,
       })),
   }))
 }
