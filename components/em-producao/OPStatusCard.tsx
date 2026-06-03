@@ -6,13 +6,16 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { SetorEditor } from './SetorEditor'
-import { concluirOP } from '@/lib/actions/em-producao'
-import type { ItemEnriquecido, StatusSetorRow, Cargo, Setor } from '@/types'
+import { LoteEditor } from './LoteEditor'
+import { concluirOP, excluirLote } from '@/lib/actions/em-producao'
+import { codigoLote, proximoNumeroLote } from '@/lib/lotes'
+import type { ItemEnriquecido, StatusSetorRow, LoteProducao, Cargo, Setor } from '@/types'
 
 interface Props {
   op: { id: string; numero: string; emitida_at: string }
   itens: ItemEnriquecido[]
   statusSetor: StatusSetorRow[]
+  lotes: LoteProducao[]
   meuCargo: Cargo
   meuSetor: Setor | null
 }
@@ -50,16 +53,34 @@ function formatDateTime(iso: string): string {
   return `${date} ${time}`
 }
 
-export function OPStatusCard({ op, itens, statusSetor, meuCargo, meuSetor }: Props) {
+export function OPStatusCard({ op, itens, statusSetor, lotes, meuCargo, meuSetor }: Props) {
   const router = useRouter()
   const [editando, setEditando] = useState<Setor | null>(null)
   const [concluindo, setConcluindo] = useState(false)
   const [erroConclui, setErroConclui] = useState('')
 
+  // Lotes: qual está em edição/criação. `novo:<itemId>` para criação, ou o id do lote em edição.
+  const [loteEditando, setLoteEditando] = useState<string | null>(null)
+  const [erroLote, setErroLote] = useState('')
+
   const canEditSetor = (key: Setor) =>
     meuCargo === 'admin' || meuSetor === key
 
   const canConcluir = meuCargo === 'admin'
+  const canEditarLotes = meuCargo === 'admin' || meuSetor === 'maquina'
+
+  const peliculasDaOP = itens.filter(i => i.pelicula_id && i.peliculas)
+
+  async function handleExcluirLote(id: string) {
+    if (!window.confirm('Excluir este lote? Esta ação não pode ser desfeita.')) return
+    setErroLote('')
+    try {
+      await excluirLote(id)
+      router.refresh()
+    } catch (err: any) {
+      setErroLote(err.message ?? 'Erro ao excluir lote')
+    }
+  }
 
   async function handleConcluir() {
     setConcluindo(true)
@@ -154,6 +175,97 @@ export function OPStatusCard({ op, itens, statusSetor, meuCargo, meuSetor }: Pro
             </div>
           )
         })}
+
+        {peliculasDaOP.length > 0 && (
+          <div className="border-t pt-2 space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground">📦 Lotes Produzidos</p>
+            {erroLote && <p className="text-xs text-red-600">{erroLote}</p>}
+            {peliculasDaOP.map(item => {
+              const lotesItem = lotes
+                .filter(l => l.item_id === item.id)
+                .sort((a, b) => a.numero.localeCompare(b.numero))
+              const cod = codigoLote(item.peliculas!.codigo, item.peliculas!.nome)
+              const numeroSugerido = proximoNumeroLote(
+                op.numero,
+                cod,
+                lotesItem.map(l => l.numero)
+              )
+              const criandoEste = loteEditando === `novo:${item.id}`
+
+              return (
+                <div key={item.id} className="text-xs">
+                  <p className="font-medium text-slate-700">{item.peliculas!.nome}</p>
+                  {lotesItem.length === 0 && !criandoEste && (
+                    <p className="text-muted-foreground italic ml-3">Nenhum lote registrado</p>
+                  )}
+                  {lotesItem.map(lote =>
+                    loteEditando === lote.id ? (
+                      <LoteEditor
+                        key={lote.id}
+                        opId={op.id}
+                        itemId={item.id}
+                        loteId={lote.id}
+                        numeroInicial={lote.numero}
+                        metragemInicial={String(lote.metragem)}
+                        onFechar={() => setLoteEditando(null)}
+                      />
+                    ) : (
+                      <div key={lote.id} className="ml-3 flex items-center gap-2">
+                        <span className="text-slate-800">
+                          {lote.numero} — {lote.metragem}m
+                        </span>
+                        {lote.usuario_nome && (
+                          <span className="text-[10px] text-muted-foreground">
+                            por {lote.usuario_nome} • {formatDateTime(lote.created_at)}
+                          </span>
+                        )}
+                        {canEditarLotes && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-5 text-[10px] px-1 shrink-0"
+                              onClick={() => setLoteEditando(lote.id)}
+                            >
+                              ✏️
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-5 text-[10px] px-1 shrink-0 text-red-600"
+                              onClick={() => handleExcluirLote(lote.id)}
+                            >
+                              🗑️
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    )
+                  )}
+                  {criandoEste ? (
+                    <LoteEditor
+                      opId={op.id}
+                      itemId={item.id}
+                      numeroInicial={numeroSugerido}
+                      onFechar={() => setLoteEditando(null)}
+                    />
+                  ) : (
+                    canEditarLotes && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 text-xs px-2 ml-3 text-blue-700"
+                        onClick={() => setLoteEditando(`novo:${item.id}`)}
+                      >
+                        + Adicionar lote
+                      </Button>
+                    )
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
 
         {canConcluir && (
           <div className="pt-1 flex flex-col items-end gap-1">

@@ -23,6 +23,7 @@ export function EmProducaoList({ ops, meuCargo, meuSetor }: Props) {
           op={{ id: op.id, numero: op.numero, emitida_at: op.emitida_at }}
           itens={op.itens}
           statusSetor={op.statusSetor}
+          lotes={op.lotes}
           meuCargo={meuCargo}
           meuSetor={meuSetor}
         />
