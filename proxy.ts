@@ -22,7 +22,15 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl
 
-  if (!user && !pathname.startsWith('/login')) {
+  // Rotas públicas: login e os fluxos de e-mail do Supabase (convite,
+  // recuperação de senha). /auth/confirm precisa rodar SEM sessão — é ele
+  // que cria a sessão via verifyOtp antes de levar a /definir-senha.
+  const rotaPublica =
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/definir-senha')
+
+  if (!user && !rotaPublica) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
   if (user && pathname === '/login') {
