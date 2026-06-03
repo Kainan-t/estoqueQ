@@ -17,7 +17,12 @@ export async function GET(request: Request) {
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`)
     }
+    const motivo = encodeURIComponent(error.message)
+    return NextResponse.redirect(`${origin}/login?erro=verify&motivo=${motivo}`)
   }
 
-  return NextResponse.redirect(`${origin}/login?erro=link_invalido`)
+  const faltando = `token_hash=${token_hash ? 'ok' : 'ausente'},type=${type ?? 'ausente'}`
+  return NextResponse.redirect(
+    `${origin}/login?erro=parametros&motivo=${encodeURIComponent(faltando)}`
+  )
 }

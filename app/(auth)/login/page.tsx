@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -16,6 +16,21 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [aviso, setAviso] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Mostra o motivo real de uma falha vinda de /auth/confirm (diagnóstico).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const erro = params.get('erro')
+    if (!erro) return
+    const motivo = params.get('motivo')
+    if (erro === 'verify') {
+      setError(`Link inválido ou expirado. Detalhe: ${motivo ?? 'sem detalhe'}`)
+    } else if (erro === 'parametros') {
+      setError(`Link incompleto. Parâmetros: ${motivo ?? 'sem detalhe'}`)
+    } else {
+      setError('Link inválido. Solicite um novo.')
+    }
+  }, [])
 
   function trocarModo(novo: 'login' | 'reset') {
     setModo(novo)
